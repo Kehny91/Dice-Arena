@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from random import randint
+from random import randint, shuffle
 
 
 showPrints = False
@@ -267,20 +267,27 @@ class Fireball(Face):
 
 # UPGRADE IS NOT IMPLEMENTED
         
-#level1Faces = ["Attack1","Attack2","Attack3","Heal1","Heal2","Sweep1","Sweep2","Fireball1","Armor2","Armor3"]
-level1Faces = ["Attack1","Attack2","Heal1","Heal2","Sweep1","Sweep2","Fireball1","Armor2","Armor3"]
+#level1Faces = ["Attack1","Attack2","Heal1","Sweep1","Sweep2","Fireball1","Armor2","Armor3"]
+level1Faces = ["Attack1","Attack2","Heal1","Sweep1","Sweep2","Fireball1","Armor1","Armor2","Armor3"]
+#allFaces = ["Attack1", "Attack2", "Attack3", "Attack4", "Attack5", "Attack6", "Heal1", "Heal2", "Heal3", "Concentration", "Sweep1", "Sweep2", "Sweep3", "Fireball1", "Fireball2", "Fireball3", "Armor2", "Armor3", "Armor4", "Armor5", "Armor6"]
+allFaces = ["Attack1", "Attack2", "Attack3", "Attack4", "Attack5", "Attack6", "Heal1", "Heal2", "Heal3", "Concentration", "Sweep1", "Sweep2", "Sweep3", "Fireball1", "Fireball2", "Fireball3", "Armor2", "Armor3", "Armor6"]
+
 
 def addSpellByString(player, string):
     if string[0:3] == "Att":
         player.faces.append(Attack(player,int(string[-1])))
-    if string[0:3] == "Hea":
+    elif string[0:3] == "Hea":
         player.faces.append(Heal(player,int(string[-1])))
-    if string[0:3] == "Swe":
+    elif string[0:3] == "Swe":
         player.faces.append(Sweep(player,int(string[-1])))
-    if string[0:3] == "Fir":
+    elif string[0:3] == "Fir":
         player.faces.append(Fireball(player,int(string[-1])))
-    if string[0:3] == "Arm":
+    elif string[0:3] == "Arm":
         player.faces.append(Armor(player,int(string[-1])))
+    elif string[0:3] == "Con":
+        player.faces.append(Concentration(player))
+    else:
+        assert False, "WEIRD"
 
 def addAllSpellsToPlayer(player, spells):
     for spell in spells:
@@ -318,7 +325,7 @@ def runGameAndReturnWinner(game):
         if player.team == win:
             return player 
 
-def battle(listOfSpells):
+def battle(listOfSpells, nbPlayerPerSide):
     hp = 20
     nbOfSpells = len(listOfSpells)
     nbPlayers = nbOfSpells + 1
@@ -336,8 +343,18 @@ def battle(listOfSpells):
     addAllSpellsToPlayer(p, listOfSpells)
     players.append(p)
 
+    alliesI = []
+    alliesJ = []
+
+    for k in range(nbPlayerPerSide-1):
+        alliesI.append(Entity(hp,"allyI",0))
+        addAllSpellsToPlayer(alliesI[-1],listOfSpells)
+        alliesJ.append(Entity(hp,"allyJ",0))
+        addAllSpellsToPlayer(alliesJ[-1],listOfSpells)
+
     for i in range(len(players)-1):
         for j in range(i+1,len(players)):
+
             for _ in range(1000):
                 # get them ready to fight
                 players[i].resetEffects()
@@ -345,28 +362,37 @@ def battle(listOfSpells):
                 players[i].team=1
                 gamePlayed[i] += 1
 
+                for k in range(nbPlayerPerSide-1):
+                    alliesI[k].resetEffects()
+                    alliesI[k].hp = hp
+                    alliesI[k].team = 1
+
                 players[j].resetEffects()
                 players[j].hp = hp
                 players[j].team=2
                 gamePlayed[j] += 1
 
+                for k in range(nbPlayerPerSide-1):
+                    alliesJ[k].resetEffects()
+                    alliesJ[k].hp = hp
+                    alliesJ[k].team = 2
+
                 g = Game()
 
-                if randint(0,1) == 0:           
-                    g.entities.append(players[i])
-                    g.entities.append(players[j])
-                else:
-                    g.entities.append(players[j])
-                    g.entities.append(players[i])
+                thisGameParticipants = [players[i],players[j]]+alliesI+alliesJ
+                shuffle(thisGameParticipants)
+
+                for participant in thisGameParticipants:
+                    g.entities.append(participant)
 
                 winner = runGameAndReturnWinner(g)
-                if winner == players[i]:
+                if winner.team == players[i].team:
                     victories[i] += 1
-                if winner == players[j]:
+                if winner.team == players[j].team:
                     victories[j] += 1
 
     for k,player in enumerate(players):
-        print(f"player {player.name} : winrate of {victories[k]/gamePlayed[k]*100:.0f} %")
+        print(f"{player.name} \t {victories[k]/gamePlayed[k]*100:.0f} %")
 
     
 
@@ -374,4 +400,4 @@ import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     #g = init1V1_everyFaces()
-    battle(level1Faces)
+    battle(allFaces,2)
