@@ -267,62 +267,27 @@ class Fireball(Face):
 
 # UPGRADE IS NOT IMPLEMENTED
         
-def addEveryFace(player : Entity):
-    player.faces.append(Fail(player))
-    player.faces.append(Attack(player,4))
-    player.faces.append(Heal(player,2))
-    player.faces.append(Armor(player,4))
-    player.faces.append(Concentration(player))
-    player.faces.append(Stun(player))
-    player.faces.append(Sweep(player,3))
-    player.faces.append(Fireball(player,2))
+#level1Faces = ["Attack1","Attack2","Attack3","Heal1","Heal2","Sweep1","Sweep2","Fireball1","Armor2","Armor3"]
+level1Faces = ["Attack1","Attack2","Heal1","Heal2","Sweep1","Sweep2","Fireball1","Armor2","Armor3"]
 
-def addAllLevel1Faces(player : Entity):
-    player.faces.append(Attack(player,1))
-    player.faces.append(Attack(player,2))
-    player.faces.append(Attack(player,3))
-    player.faces.append(Heal(player,1))
-    player.faces.append(Heal(player,2))
-    player.faces.append(Sweep(player,1))
-    player.faces.append(Sweep(player,2))
-    player.faces.append(Fireball(player,1))
-    player.faces.append(Armor(player,2))
-    player.faces.append(Armor(player,3))
+def addSpellByString(player, string):
+    if string[0:3] == "Att":
+        player.faces.append(Attack(player,int(string[-1])))
+    if string[0:3] == "Hea":
+        player.faces.append(Heal(player,int(string[-1])))
+    if string[0:3] == "Swe":
+        player.faces.append(Sweep(player,int(string[-1])))
+    if string[0:3] == "Fir":
+        player.faces.append(Fireball(player,int(string[-1])))
+    if string[0:3] == "Arm":
+        player.faces.append(Armor(player,int(string[-1])))
+
+def addAllSpellsToPlayer(player, spells):
+    for spell in spells:
+        addSpellByString(player, spell)
 
 teamOne = 1
 teamTwo = 2
-
-def init1V1_everyFaces(hp):
-    g = Game()
-
-    p1 = Entity(hp,"P1",teamOne)
-    addEveryFace(p1)
-    g.entities.append(p1)
-
-    p2 = Entity(hp,"P2",teamTwo)
-    addEveryFace(p2)
-    g.entities.append(p2)
-    return g
-
-def init2V2_everyFaces(hp):
-    g = Game()
-
-    p1_BLUE = Entity(hp,"P1_BLUE",teamOne)
-    addEveryFace(p1_BLUE)
-    g.entities.append(p1_BLUE)
-
-    p2_BLUE = Entity(hp,"P2_BLUE",teamOne)
-    addEveryFace(p2_BLUE)
-    g.entities.append(p2_BLUE)
-
-    p1_RED = Entity(hp,"P1_RED",teamTwo)
-    addEveryFace(p1_RED)
-    g.entities.append(p1_RED)
-
-    p2_RED = Entity(hp,"P2_RED",teamTwo)
-    addEveryFace(p2_RED)
-    g.entities.append(p2_RED)
-    return g
 
 def runGame(game):
     nbTours = 0
@@ -353,22 +318,22 @@ def runGameAndReturnWinner(game):
         if player.team == win:
             return player 
 
-def battle():
+def battle(listOfSpells):
     hp = 20
-    nbLevel1Spells = 10
-    nbPlayers = nbLevel1Spells + 1
+    nbOfSpells = len(listOfSpells)
+    nbPlayers = nbOfSpells + 1
     players = []
     victories = [0]*nbPlayers
     gamePlayed = [0]*nbPlayers
-    for i in range(nbLevel1Spells):
+    for i in range(nbOfSpells):
         p = Entity(20,"unassigned",0)
-        addAllLevel1Faces(p)
+        addAllSpellsToPlayer(p, listOfSpells)
         facesRemoved = p.faces.pop(i)
         p.name = "no"+facesRemoved.faceName
         players.append(p)
 
     p = Entity(20,"everything",0)
-    addAllLevel1Faces(p)
+    addAllSpellsToPlayer(p, listOfSpells)
     players.append(p)
 
     for i in range(len(players)-1):
@@ -386,8 +351,14 @@ def battle():
                 gamePlayed[j] += 1
 
                 g = Game()
-                g.entities.append(players[i])
-                g.entities.append(players[j])
+
+                if randint(0,1) == 0:           
+                    g.entities.append(players[i])
+                    g.entities.append(players[j])
+                else:
+                    g.entities.append(players[j])
+                    g.entities.append(players[i])
+
                 winner = runGameAndReturnWinner(g)
                 if winner == players[i]:
                     victories[i] += 1
@@ -403,4 +374,4 @@ import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     #g = init1V1_everyFaces()
-    battle()
+    battle(level1Faces)
