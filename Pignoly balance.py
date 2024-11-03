@@ -32,6 +32,19 @@ class Game:
             if i>=len(self.entities):
                 stop = True
 
+    def winningTeam(self):
+        """Returns None is there is no winner yet, or the winning team"""
+        inGameTeams = set()
+        for entity in self.entities:
+            if entity.alive():
+                inGameTeams.add(entity.team)
+
+        if len(inGameTeams) == 1:
+            return list(inGameTeams)[0]
+        else:
+            return None
+                
+
 class Entity:
     def __init__(self, hp, name, team, parent = None):
         self.parent = parent
@@ -49,7 +62,7 @@ class Entity:
         return self.hp > 0
     
     def resetEffects(self):
-        """Called before rerolling the dice"""
+        """Called before rerolling the dice. DO NOT CALL WHEN REROLLING AFTER CONCENTRATION"""
         self.activeArmor = 0
         self.immune = False
         self.concentration = 1
@@ -237,12 +250,11 @@ def addEveryFace(player : Entity):
     player.faces.append(Sweep(player,2))
     player.faces.append(Fireball(player,2))
 
+teamOne = 1
+teamTwo = 2
 
-
-def OneVOne_EveryFaces():
+def init1V1_everyFaces():
     g = Game()
-    teamOne = 1
-    teamTwo = 2
 
     p1 = Entity(50,"P1",teamOne)
     addEveryFace(p1)
@@ -251,13 +263,37 @@ def OneVOne_EveryFaces():
     p2 = Entity(50,"P2",teamTwo)
     addEveryFace(p2)
     g.entities.append(p2)
+    return g
 
+def init2V2_everyFaces():
+    g = Game()
+
+    p1_BLUE = Entity(50,"P1_BLUE",teamOne)
+    addEveryFace(p1_BLUE)
+    g.entities.append(p1_BLUE)
+
+    p2_BLUE = Entity(50,"P2_BLUE",teamOne)
+    addEveryFace(p2_BLUE)
+    g.entities.append(p2_BLUE)
+
+    p1_RED = Entity(50,"P1_RED",teamTwo)
+    addEveryFace(p1_RED)
+    g.entities.append(p1_RED)
+
+    p2_RED = Entity(50,"P2_RED",teamTwo)
+    addEveryFace(p2_RED)
+    g.entities.append(p2_RED)
+    return g
+
+def runGame(game):
     nbTours = 0
-    while p1.alive() and p2.alive():
-        g.newTurn()
+    while game.winningTeam() is None:
+        game.newTurn()
         nbTours += 1
 
     print("Terminé en ",nbTours," tours, soit ", nbTours*20/60, " minutes") #20 sec par tours
     
 if __name__ == "__main__":
-    OneVOne_EveryFaces()
+    #g = init1V1_everyFaces()
+    g = init2V2_everyFaces()
+    runGame(g)
