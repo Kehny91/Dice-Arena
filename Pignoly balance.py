@@ -1,16 +1,26 @@
 from abc import ABC, abstractmethod
 from random import randint
 
+
+showPrints = False
+def toggleablePrint(string,end=" "):
+    if showPrints:
+        print(string, end)
+
+class GameStat:
+    def __init__(self):
+        self.nbThrows = 0
+
 class Game:
     def __init__(self):
         self.entities = []
 
-    def newTurn(self):
-        print("\nNew Turn. HP left : ",end="")
+    def newTurn(self, gameStat= None):
+        toggleablePrint("\nNew Turn. HP left: ",end="")
+        toggleablePrint("|".join([f"{entity.name}: {entity.hp}" for entity in self.entities]))
+
         for entity in self.entities:
             entity.playedThisTurn = False
-            print(entity.name, " : ", entity.hp,end=" ")
-        print("")
 
         # Selection alétoire des joueurs
         # TODO
@@ -21,11 +31,13 @@ class Game:
             entityPlaying.resetEffects()
             while entityPlaying.canPlay(self):
                 rolledFace = entityPlaying.faces[randint(0,len(entityPlaying.faces)-1)]
+                if gameStat is not None:
+                    gameStat.nbThrows += 1
                 target = rolledFace.defaultTarget(self)
                 if target is not None:
-                    print(entityPlaying.name," uses ",rolledFace.faceName, " on ", target.name, end=", ")
+                    toggleablePrint(f"{entityPlaying.name} uses {rolledFace.faceName} on {target.name}, ",end="")
                 else:
-                    print(entityPlaying.name," uses ",rolledFace.faceName, end=", ")
+                    toggleablePrint(f"{entityPlaying.name} uses {rolledFace.faceName}, ",end="")
                 rolledFace.apply(self, rolledFace.defaultTarget(self))
 
             i += 1
@@ -76,19 +88,19 @@ class Entity:
 
     def handleAttack(self, dmg, magic):
         if not self.immune:
+            hpLost = 0
             if magic:
-                self.hp -= dmg
-                print(self.name," looses ", dmg, " hp")
+                hpLost = dmg
             else:
                 hpLost = max(0, dmg-self.activeArmor)
-                self.hp -= hpLost
-                print(self.name," looses ", hpLost, " hp")
+            self.hp -= hpLost
+            toggleablePrint(f"{self.name} looses {hpLost} hp")
         else:
-            print(self.name," is immune")
+            toggleablePrint(f"{self.name} is immune")
 
     def handleHeal(self, heal):
         self.hp += heal
-        print(self.name," heals ", heal)
+        toggleablePrint(f"{self.name} heals {heal} hp")
 
 class Face(ABC):
     def __init__(self, name, owner : Entity):
@@ -130,13 +142,16 @@ class Face(ABC):
     
     def _selectNone(self, game : Game):
         return None
+    
+    def _selectSelf(self, game : Game):
+        return self.owner
 
 class Fail(Face):
     def __init__(self, owner : Entity):
         super().__init__("FAIL", owner)
 
     def apply(self, game, target : Entity):
-        print("nothing happens")
+        toggleablePrint("nothing happens")
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -149,7 +164,10 @@ class Attack(Face):
 
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
-        target.handleAttack(self.owner.concentration*self.dmg,False)
+        if target is None:
+            toggleablePrint("No one to attack")
+        else:
+            target.handleAttack(self.owner.concentration*self.dmg,False)
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -162,6 +180,7 @@ class Heal(Face):
 
     def apply(self, game, target : Entity):
         """target must be the one to heal"""
+        # Target can't be None as the caster is alive
         target.handleHeal(self.owner.concentration*self.heal)
         self.owner.playedThisTurn = True
 
@@ -175,12 +194,14 @@ class Armor(Face):
 
     def apply(self, game, target: Entity):
         """target must be the one to armor"""
+        # Target can't be None as the caster is alive
         target.activeArmor = self.owner.concentration*self.armor
         self.owner.playedThisTurn = True
-        print(target.name, " gain ", self.owner.concentration*self.armor, " armor")
+        
+        toggleablePrint(f"{target.name} gains {self.owner.concentration*self.armor} armor")
 
     def defaultTarget(self, game):
-        return self._selectWeakestFriend(game)
+        return self._selectSelf(game)
 
 class Concentration(Face):
     def __init__(self, owner : Entity):
@@ -189,9 +210,8 @@ class Concentration(Face):
     def apply(self, game, target: Entity):
         """target is ignored"""
         self.owner.concentration *= 2
-        print(self.owner.name, " concentrates")
-        if target is not None:
-            print("WEIRD1")
+        toggleablePrint(f"{self.owner.name} concentrates")
+        assert target is None, "WEIRD"
         # Do not set self.owner.playedThisTurn to True
             
     def defaultTarget(self, game):
@@ -203,9 +223,13 @@ class Stun(Face):
     
     def apply(self, game, target: Entity):
         """Target is stunned"""
-        self.owner.stunning = target
+        if target is None:
+            toggleablePrint("No one to stun")
+        else:
+            self.owner.stunning = target
+            toggleablePrint(f"{target.name} is stunned")
         self.owner.playedThisTurn = True
-        print(target.name, " is stunned ")
+        
 
     def defaultTarget(self, game):
         return self._selectWeakestOpp(game)
@@ -232,7 +256,10 @@ class Fireball(Face):
 
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
-        target.handleAttack(self.owner.concentration*self.dmg,True)
+        if target is None:
+            toggleablePrint("No one to fireball")
+        else:
+            target.handleAttack(self.owner.concentration*self.dmg,True)
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -247,40 +274,52 @@ def addEveryFace(player : Entity):
     player.faces.append(Armor(player,4))
     player.faces.append(Concentration(player))
     player.faces.append(Stun(player))
-    player.faces.append(Sweep(player,2))
+    player.faces.append(Sweep(player,3))
     player.faces.append(Fireball(player,2))
+
+def addAllLevel1Faces(player : Entity):
+    player.faces.append(Attack(player,1))
+    player.faces.append(Attack(player,2))
+    player.faces.append(Attack(player,3))
+    player.faces.append(Heal(player,1))
+    player.faces.append(Heal(player,2))
+    player.faces.append(Sweep(player,1))
+    player.faces.append(Sweep(player,2))
+    player.faces.append(Fireball(player,1))
+    player.faces.append(Armor(player,2))
+    player.faces.append(Armor(player,3))
 
 teamOne = 1
 teamTwo = 2
 
-def init1V1_everyFaces():
+def init1V1_everyFaces(hp):
     g = Game()
 
-    p1 = Entity(50,"P1",teamOne)
+    p1 = Entity(hp,"P1",teamOne)
     addEveryFace(p1)
     g.entities.append(p1)
 
-    p2 = Entity(50,"P2",teamTwo)
+    p2 = Entity(hp,"P2",teamTwo)
     addEveryFace(p2)
     g.entities.append(p2)
     return g
 
-def init2V2_everyFaces():
+def init2V2_everyFaces(hp):
     g = Game()
 
-    p1_BLUE = Entity(50,"P1_BLUE",teamOne)
+    p1_BLUE = Entity(hp,"P1_BLUE",teamOne)
     addEveryFace(p1_BLUE)
     g.entities.append(p1_BLUE)
 
-    p2_BLUE = Entity(50,"P2_BLUE",teamOne)
+    p2_BLUE = Entity(hp,"P2_BLUE",teamOne)
     addEveryFace(p2_BLUE)
     g.entities.append(p2_BLUE)
 
-    p1_RED = Entity(50,"P1_RED",teamTwo)
+    p1_RED = Entity(hp,"P1_RED",teamTwo)
     addEveryFace(p1_RED)
     g.entities.append(p1_RED)
 
-    p2_RED = Entity(50,"P2_RED",teamTwo)
+    p2_RED = Entity(hp,"P2_RED",teamTwo)
     addEveryFace(p2_RED)
     g.entities.append(p2_RED)
     return g
@@ -291,9 +330,77 @@ def runGame(game):
         game.newTurn()
         nbTours += 1
 
-    print("Terminé en ",nbTours," tours, soit ", nbTours*20/60, " minutes") #20 sec par tours
+    print(f"Terminé en {nbTours} tours, soit {nbTours*20/60} minutes") #20 sec par tours
+
+def runGameAndMeasureTime_s(game):
+    stat = GameStat()
+
+    nbTours = 0
+    while game.winningTeam() is None:
+        game.newTurn(stat)
+        nbTours += 1
     
+    timePerThrow_s = 20
+
+    return stat.nbThrows*timePerThrow_s
+
+def runGameAndReturnWinner(game):
+    while game.winningTeam() is None:
+        game.newTurn()
+
+    win = game.winningTeam()
+    for player in game.entities:
+        if player.team == win:
+            return player 
+
+def battle():
+    hp = 20
+    nbLevel1Spells = 10
+    nbPlayers = nbLevel1Spells + 1
+    players = []
+    victories = [0]*nbPlayers
+    gamePlayed = [0]*nbPlayers
+    for i in range(nbLevel1Spells):
+        p = Entity(20,"unassigned",0)
+        addAllLevel1Faces(p)
+        facesRemoved = p.faces.pop(i)
+        p.name = "no"+facesRemoved.faceName
+        players.append(p)
+
+    p = Entity(20,"everything",0)
+    addAllLevel1Faces(p)
+    players.append(p)
+
+    for i in range(len(players)-1):
+        for j in range(i+1,len(players)):
+            for _ in range(1000):
+                # get them ready to fight
+                players[i].resetEffects()
+                players[i].hp = hp
+                players[i].team=1
+                gamePlayed[i] += 1
+
+                players[j].resetEffects()
+                players[j].hp = hp
+                players[j].team=2
+                gamePlayed[j] += 1
+
+                g = Game()
+                g.entities.append(players[i])
+                g.entities.append(players[j])
+                winner = runGameAndReturnWinner(g)
+                if winner == players[i]:
+                    victories[i] += 1
+                if winner == players[j]:
+                    victories[j] += 1
+
+    for k,player in enumerate(players):
+        print(f"player {player.name} : winrate of {victories[k]/gamePlayed[k]*100:.0f} %")
+
+    
+
+import matplotlib.pyplot as plt
+
 if __name__ == "__main__":
     #g = init1V1_everyFaces()
-    g = init2V2_everyFaces()
-    runGame(g)
+    battle()
