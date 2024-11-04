@@ -1,11 +1,17 @@
 from abc import ABC, abstractmethod
 from random import randint, shuffle
+from tqdm import tqdm
+import numpy as np
 
+class GameEngine:
+    def __init__(self):
+        self.showPrints = False
 
-showPrints = False
-def toggleablePrint(string,end=" "):
-    if showPrints:
-        print(string, end)
+    def print(self,string,end=" "):
+        if self.showPrints:
+            print(string,end)
+
+ge = GameEngine()
 
 class GameStat:
     def __init__(self):
@@ -16,8 +22,8 @@ class Game:
         self.entities = []
 
     def newTurn(self, gameStat= None):
-        toggleablePrint("\nNew Turn. HP left: ",end="")
-        toggleablePrint("|".join([f"{entity.name}: {entity.hp}" for entity in self.entities]))
+        ge.print("\nNew Turn. HP left: ",end="")
+        ge.print("|".join([f"{entity.name}: {entity.hp}" for entity in self.entities]))
 
         for entity in self.entities:
             entity.playedThisTurn = False
@@ -35,9 +41,9 @@ class Game:
                     gameStat.nbThrows += 1
                 target = rolledFace.defaultTarget(self)
                 if target is not None:
-                    toggleablePrint(f"{entityPlaying.name} uses {rolledFace.faceName} on {target.name}, ",end="")
+                    ge.print(f"{entityPlaying.name} uses {rolledFace.faceName} on {target.name}, ",end="")
                 else:
-                    toggleablePrint(f"{entityPlaying.name} uses {rolledFace.faceName}, ",end="")
+                    ge.print(f"{entityPlaying.name} uses {rolledFace.faceName}, ",end="")
                 rolledFace.apply(self, rolledFace.defaultTarget(self))
 
             i += 1
@@ -55,6 +61,19 @@ class Game:
             return list(inGameTeams)[0]
         else:
             return None
+        
+    def runUntilWinner(self, gameStat = None):
+        turn = 0
+        while self.winningTeam() is None:
+            self.newTurn(gameStat)
+            turn +=1
+            if turn > 1000:
+                # print("")
+                # for p in self.entities:
+                #     p.debug()
+                print("GAME TOO LONG")
+                break
+
                 
 
 class Entity:
@@ -94,13 +113,20 @@ class Entity:
             else:
                 hpLost = max(0, dmg-self.activeArmor)
             self.hp -= hpLost
-            toggleablePrint(f"{self.name} looses {hpLost} hp")
+            ge.print(f"{self.name} looses {hpLost} hp")
         else:
-            toggleablePrint(f"{self.name} is immune")
+            ge.print(f"{self.name} is immune")
 
     def handleHeal(self, heal):
         self.hp += heal
-        toggleablePrint(f"{self.name} heals {heal} hp")
+        ge.print(f"{self.name} heals {heal} hp")
+
+    def facesStr(self):
+        return"|".join([f.faceName for f in self.faces])
+
+    def debug(self):
+        print(f"{self.name} : HP {self.hp} faces : ",end="")
+        self.printFaces()
 
 class Face(ABC):
     def __init__(self, name, owner : Entity):
@@ -151,7 +177,7 @@ class Fail(Face):
         super().__init__("FAIL", owner)
 
     def apply(self, game, target : Entity):
-        toggleablePrint("nothing happens")
+        ge.print("nothing happens")
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -165,7 +191,7 @@ class Attack(Face):
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
         if target is None:
-            toggleablePrint("No one to attack")
+            ge.print("No one to attack")
         else:
             target.handleAttack(self.owner.concentration*self.dmg,False)
         self.owner.playedThisTurn = True
@@ -198,7 +224,7 @@ class Armor(Face):
         target.activeArmor = self.owner.concentration*self.armor
         self.owner.playedThisTurn = True
         
-        toggleablePrint(f"{target.name} gains {self.owner.concentration*self.armor} armor")
+        ge.print(f"{target.name} gains {self.owner.concentration*self.armor} armor")
 
     def defaultTarget(self, game):
         return self._selectSelf(game)
@@ -210,7 +236,7 @@ class Concentration(Face):
     def apply(self, game, target: Entity):
         """target is ignored"""
         self.owner.concentration *= 2
-        toggleablePrint(f"{self.owner.name} concentrates")
+        ge.print(f"{self.owner.name} concentrates")
         assert target is None, "WEIRD"
         # Do not set self.owner.playedThisTurn to True
             
@@ -224,10 +250,10 @@ class Stun(Face):
     def apply(self, game, target: Entity):
         """Target is stunned"""
         if target is None:
-            toggleablePrint("No one to stun")
+            ge.print("No one to stun")
         else:
             self.owner.stunning = target
-            toggleablePrint(f"{target.name} is stunned")
+            ge.print(f"{target.name} is stunned")
         self.owner.playedThisTurn = True
         
 
@@ -257,7 +283,7 @@ class Fireball(Face):
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
         if target is None:
-            toggleablePrint("No one to fireball")
+            ge.print("No one to fireball")
         else:
             target.handleAttack(self.owner.concentration*self.dmg,True)
         self.owner.playedThisTurn = True
@@ -267,10 +293,11 @@ class Fireball(Face):
 
 # UPGRADE IS NOT IMPLEMENTED
         
-#level1Faces = ["Attack1","Attack2","Heal1","Sweep1","Sweep2","Fireball1","Armor2","Armor3"]
-level1Faces = ["Attack1","Attack2","Heal1","Sweep1","Sweep2","Fireball1","Armor1","Armor2","Armor3"]
-#allFaces = ["Attack1", "Attack2", "Attack3", "Attack4", "Attack5", "Attack6", "Heal1", "Heal2", "Heal3", "Concentration", "Sweep1", "Sweep2", "Sweep3", "Fireball1", "Fireball2", "Fireball3", "Armor2", "Armor3", "Armor4", "Armor5", "Armor6"]
-allFaces = ["Attack1", "Attack2", "Attack3", "Attack4", "Attack5", "Attack6", "Heal1", "Heal2", "Heal3", "Concentration", "Sweep1", "Sweep2", "Sweep3", "Fireball1", "Fireball2", "Fireball3", "Armor2", "Armor3", "Armor6"]
+level1Faces = ["Attack1","Attack2","Heal1","Sweep1","Sweep2","Fireball1","Armor2","Armor3"]
+#level2Faces = ["Attack3","Attack4","Heal2","Sweep3","Armor6"]
+#level3Faces = ["Attack5","Attack6","Heal3","Concentration","Fireball3"]
+level2Faces = ["Attack3","Attack4","Heal2","Sweep3","Armor6","Concentration"]
+level3Faces = ["Attack5","Attack6","Fireball3"]
 
 
 def addSpellByString(player, string):
@@ -293,39 +320,27 @@ def addAllSpellsToPlayer(player, spells):
     for spell in spells:
         addSpellByString(player, spell)
 
+
+def createLegitPlayer(hp, name, team):
+    p = Entity(hp,name,team)
+    level1FacesCopy = level1Faces.copy()
+    shuffle(level1FacesCopy)
+    addSpellByString(p,level1FacesCopy[0])
+    addSpellByString(p,level1FacesCopy[1])
+    addSpellByString(p,level2Faces[randint(0,len(level2Faces)-1)])
+    addSpellByString(p,level3Faces[randint(0,len(level3Faces)-1)])
+    p.faces.append(Fail(p))
+    return p
+
 teamOne = 1
 teamTwo = 2
 
-def runGame(game):
-    nbTours = 0
-    while game.winningTeam() is None:
-        game.newTurn()
-        nbTours += 1
+def preparePlayerForBattle(player, hp, team):
+    player.resetEffects()
+    player.hp = hp
+    player.team=team
 
-    print(f"Terminé en {nbTours} tours, soit {nbTours*20/60} minutes") #20 sec par tours
-
-def runGameAndMeasureTime_s(game):
-    stat = GameStat()
-
-    nbTours = 0
-    while game.winningTeam() is None:
-        game.newTurn(stat)
-        nbTours += 1
-    
-    timePerThrow_s = 20
-
-    return stat.nbThrows*timePerThrow_s
-
-def runGameAndReturnWinner(game):
-    while game.winningTeam() is None:
-        game.newTurn()
-
-    win = game.winningTeam()
-    for player in game.entities:
-        if player.team == win:
-            return player 
-
-def battle(listOfSpells, nbPlayerPerSide):
+def battleOfPlayerMissingOneSpell(listOfSpells, nbPlayerPerSide):
     hp = 20
     nbOfSpells = len(listOfSpells)
     nbPlayers = nbOfSpells + 1
@@ -385,19 +400,82 @@ def battle(listOfSpells, nbPlayerPerSide):
                 for participant in thisGameParticipants:
                     g.entities.append(participant)
 
-                winner = runGameAndReturnWinner(g)
-                if winner.team == players[i].team:
+                g.runUntilWinner()
+                winningTeam = g.winningTeam()
+                if winningTeam == players[i].team:
                     victories[i] += 1
-                if winner.team == players[j].team:
+                if winningTeam == players[j].team:
                     victories[j] += 1
 
     for k,player in enumerate(players):
         print(f"{player.name} \t {victories[k]/gamePlayed[k]*100:.0f} %")
 
+def battleOfRandomLegitPlayers(nbPlayerPerSide):
+    hp = 20
+    nbTeams = 1000
+    nbPlayers = nbTeams*nbPlayerPerSide
+    players = []
+    matchPlayed = [0]*nbPlayers
+    wins = [0]*nbPlayers
+    for k in range(nbPlayers):
+        players.append(createLegitPlayer(hp,"p"+str(k),0))
     
+    indexes = list(range(nbPlayers))
+
+    nbIters = 100000
+    # Sans heal 3 => 963  / 100000
+    # Avec heal 3 => 2174 / 100000 
+    nbUnfinishable = 0
+    for i in tqdm(range(nbIters)):
+        shuffle(indexes)
+        teamA = [players[indexes[k]] for k in range(nbPlayerPerSide)]
+        teamB = [players[indexes[k]] for k in range(nbPlayerPerSide,2*nbPlayerPerSide)]
+        for p in  teamA:
+            preparePlayerForBattle(p, hp, 1)
+        for p in  teamB:
+            preparePlayerForBattle(p, hp, 2)
+        contestants = teamA+teamB
+        shuffle(contestants)
+
+        
+
+        g = Game()
+        for p in contestants:
+            g.entities.append(p)
+        g.runUntilWinner()
+        if g.winningTeam() is not None:
+            for k in range(2*nbPlayerPerSide):
+                matchPlayed[indexes[k]] += 1 # Si personne n'a gagné, on ne compte pas la partie
+            teamAWon = g.winningTeam() == teamA[0].team
+            if teamAWon:
+                for k in range(nbPlayerPerSide):
+                    wins[indexes[k]] += 1
+            else:
+                for k in range(nbPlayerPerSide,2*nbPlayerPerSide):
+                    wins[indexes[k]] += 1
+        else:
+            nbUnfinishable +=1
+
+    print(nbUnfinishable, " unfinishables")
+    
+    return players,matchPlayed,wins
+
+
+        
 
 import matplotlib.pyplot as plt
-
+from functools import cmp_to_key
 if __name__ == "__main__":
-    #g = init1V1_everyFaces()
-    battle(allFaces,2)
+    players,matchPlayed,wins = battleOfRandomLegitPlayers(1)
+    winrate = np.array(wins)/np.array(matchPlayed)
+
+    def hasBetterWinrate(a,b):
+        return a[1] - b[1]
+    
+    results = [(players[i],winrate[i]) for i in range(len(players))]
+    results = sorted(results, key = cmp_to_key(hasBetterWinrate),reverse=True)
+    for r in results[0:20]:
+        print(f"{r[0].facesStr()} winrate : {r[1]*100:.0f}%")
+
+    # On compte combien de fois un spell s'est retrouvé sur le dé du vainqueur
+    # Problème, certains spells sont moins fréquent que d'autres donc il faut pondérer
