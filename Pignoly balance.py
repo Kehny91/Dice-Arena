@@ -1,15 +1,21 @@
 from abc import ABC, abstractmethod
-from random import randint, shuffle
-from tqdm import tqdm
+from random import randint
 import numpy as np
 
 class GameEngine:
     def __init__(self):
         self.showPrints = False
+        self.print = self._inactive_print if not self.showPrints else self._active_print
 
-    def print(self,string,end=" "):
-        if self.showPrints:
-            print(string,end)
+    def _active_print(self, string, end=" "):
+        print(string, end=end)
+
+    def _inactive_print(self, string, end=" "):
+        pass
+
+    def set_show_prints(self, showPrints):
+        self.showPrints = showPrints
+        self.print = self._active_print if showPrints else self._inactive_print
 
 ge = GameEngine()
 
@@ -323,12 +329,13 @@ def addAllSpellsToPlayer(player, spells):
 
 def createLegitPlayer(hp, name, team):
     p = Entity(hp,name,team)
-    level1FacesCopy = level1Faces.copy()
-    shuffle(level1FacesCopy)
-    addSpellByString(p,level1FacesCopy[0])
-    addSpellByString(p,level1FacesCopy[1])
-    addSpellByString(p,level2Faces[randint(0,len(level2Faces)-1)])
-    addSpellByString(p,level3Faces[randint(0,len(level3Faces)-1)])
+    lvl1Indexes = getNIndexesRandomly(level1Faces,2,False)
+    lvl2Indexes = getNIndexesRandomly(level2Faces,1,False)
+    lvl3Indexes = getNIndexesRandomly(level3Faces,1,False)
+    addSpellByString(p,level1Faces[lvl1Indexes[0]])
+    addSpellByString(p,level1Faces[lvl1Indexes[1]])
+    addSpellByString(p,level2Faces[lvl2Indexes[0]])
+    addSpellByString(p,level3Faces[lvl3Indexes[0]])
     p.faces.append(Fail(p))
     return p
 
@@ -395,10 +402,10 @@ def battleOfPlayerMissingOneSpell(listOfSpells, nbPlayerPerSide):
                 g = Game()
 
                 thisGameParticipants = [players[i],players[j]]+alliesI+alliesJ
-                shuffle(thisGameParticipants)
+                ordering = getNIndexesRandomly(thisGameParticipants,2*nbPlayerPerSide,True)
 
-                for participant in thisGameParticipants:
-                    g.entities.append(participant)
+                for k in ordering:
+                    g.entities.append(thisGameParticipants[k])
 
                 g.runUntilWinner()
                 winningTeam = g.winningTeam()
@@ -410,6 +417,19 @@ def battleOfPlayerMissingOneSpell(listOfSpells, nbPlayerPerSide):
     for k,player in enumerate(players):
         print(f"{player.name} \t {victories[k]/gamePlayed[k]*100:.0f} %")
 
+
+def getNIndexesRandomly(elements, N, mustBeDifferent):
+    """elements is passed but really, we just need its length"""
+    pickedIndexes = []
+    allIndexes = list(range(len(elements)))
+    for k in range(N):
+        if mustBeDifferent:
+            pickedIndexes.append(allIndexes.pop(randint(0,len(allIndexes)-1)))
+        else:
+            pickedIndexes.append(allIndexes[randint(0,len(allIndexes)-1)])
+    return pickedIndexes
+
+
 def battleOfRandomLegitPlayers(nbPlayerPerSide):
     hp = 20
     nbTeams = 1000
@@ -419,40 +439,37 @@ def battleOfRandomLegitPlayers(nbPlayerPerSide):
     wins = [0]*nbPlayers
     for k in range(nbPlayers):
         players.append(createLegitPlayer(hp,"p"+str(k),0))
-    
-    indexes = list(range(nbPlayers))
 
     nbIters = 100000
     # Sans heal 3 => 963  / 100000
     # Avec heal 3 => 2174 / 100000 
     nbUnfinishable = 0
-    for i in tqdm(range(nbIters)):
-        shuffle(indexes)
-        teamA = [players[indexes[k]] for k in range(nbPlayerPerSide)]
-        teamB = [players[indexes[k]] for k in range(nbPlayerPerSide,2*nbPlayerPerSide)]
+    for i in range(nbIters):
+        playerIndexes = getNIndexesRandomly(players,2*nbPlayerPerSide,True)
+        teamA = [players[playerIndexes[k]] for k in range(nbPlayerPerSide)]
+        teamB = [players[playerIndexes[k]] for k in range(nbPlayerPerSide,2*nbPlayerPerSide)]
         for p in  teamA:
             preparePlayerForBattle(p, hp, 1)
         for p in  teamB:
             preparePlayerForBattle(p, hp, 2)
         contestants = teamA+teamB
-        shuffle(contestants)
-
         
-
+        ordering = getNIndexesRandomly(contestants,2*nbPlayerPerSide,True)
         g = Game()
-        for p in contestants:
-            g.entities.append(p)
+        for k in ordering:
+            g.entities.append(contestants[k])
+
         g.runUntilWinner()
         if g.winningTeam() is not None:
             for k in range(2*nbPlayerPerSide):
-                matchPlayed[indexes[k]] += 1 # Si personne n'a gagné, on ne compte pas la partie
+                matchPlayed[playerIndexes[k]] += 1 # Si personne n'a gagné, on ne compte pas la partie
             teamAWon = g.winningTeam() == teamA[0].team
             if teamAWon:
                 for k in range(nbPlayerPerSide):
-                    wins[indexes[k]] += 1
+                    wins[playerIndexes[k]] += 1
             else:
                 for k in range(nbPlayerPerSide,2*nbPlayerPerSide):
-                    wins[indexes[k]] += 1
+                    wins[playerIndexes[k]] += 1
         else:
             nbUnfinishable +=1
 
