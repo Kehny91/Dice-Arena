@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
 from random import randint
+import random
 import numpy as np
-
+import math
+import itertools
 class GameEngine:
     def __init__(self):
         self.showPrints = False
@@ -73,10 +75,11 @@ class Game:
         while self.winningTeam() is None:
             self.newTurn(gameStat)
             turn +=1
-            if turn > 1000:
-                # print("")
-                # for p in self.entities:
-                #     p.debug()
+            timePerTurn_min = len(self.entities)*10/60 # Chacun prend 10 s pour lancer
+            if turn*timePerTurn_min > 40:
+                print("")
+                for p in self.entities:
+                    p.debug()
                 print("GAME TOO LONG")
                 break
 
@@ -94,6 +97,7 @@ class Entity:
         self.stunning = None
         self.playedThisTurn = False
         self.team = team
+        self.taunting = False
 
     def alive(self):
         return self.hp > 0
@@ -104,6 +108,7 @@ class Entity:
         self.immune = False
         self.concentration = 1
         self.stunning = None
+        self.taunting = False
 
     def canPlay(self, game : Game):
         for entity in game.entities:
@@ -112,32 +117,46 @@ class Entity:
         return not self.playedThisTurn and self.alive()
 
     def handleAttack(self, dmg, magic):
+        """Take armor into account. Returns hp lost"""
+        hpLost = 0
         if not self.immune:
-            hpLost = 0
             if magic:
                 hpLost = dmg
             else:
                 hpLost = max(0, dmg-self.activeArmor)
+            if self.hp<hpLost:
+                hpLost = self.hp
             self.hp -= hpLost
             ge.print(f"{self.name} looses {hpLost} hp")
         else:
             ge.print(f"{self.name} is immune")
+        self.hp = max(self.hp, 0)
+        return hpLost
 
     def handleHeal(self, heal):
         self.hp += heal
         ge.print(f"{self.name} heals {heal} hp")
 
+    def isTauntedBy(self, game : Game):
+        """Returns None or the player taunting"""
+        for entity in game.entities:
+            if entity.alive() and entity.team != self.team:
+                if entity.taunting:
+                    return entity
+        return None
+
     def facesStr(self):
         return"|".join([f.faceName for f in self.faces])
 
     def debug(self):
-        print(f"{self.name} : HP {self.hp} faces : ",end="")
-        self.printFaces()
+        print(f"{self.name} : Team {self.team} HP {self.hp} faces : ",end="")
+        print(self.facesStr())
 
 class Face(ABC):
-    def __init__(self, name, owner : Entity):
+    def __init__(self, name, owner : Entity, tier):
         self.faceName = name
         self.owner = owner
+        self.tier = tier
     
     @abstractmethod
     def defaultTarget(self, game):
@@ -149,6 +168,10 @@ class Face(ABC):
         pass
 
     def _selectWeakestOpp(self, game : Game):
+        taunter = self.owner.isTauntedBy(game)
+        if taunter is not None:
+            return taunter
+
         bestTarget = None
         bestTargetHealth = None
 
@@ -159,8 +182,31 @@ class Face(ABC):
                     bestTargetHealth = entity.hp
         
         return bestTarget
+
+    def _selectWeakestOppWithoutTooMuchArmor(self, game : Game):
+        """Special case : avoid hitting someone under armor"""
+        taunter = self.owner.isTauntedBy(game)
+        if taunter is not None:
+            return taunter
+    
+        bestTarget = None
+        bestTargetHealth = None
+
+        for entity in game.entities:
+            if entity.alive() and entity.team != self.owner.team:
+                tooMuchArmor = entity.activeArmor >= self.dmg
+                if bestTarget is None or (entity.hp < bestTarget.hp and not tooMuchArmor):
+                    # Check if under too much armor
+                    bestTarget = entity
+                    bestTargetHealth = entity.hp
+        
+        return bestTarget
     
     def _selectWeakestFriend(self, game : Game):
+        taunter = self.owner.isTauntedBy(game)
+        if taunter is not None:
+            return taunter
+
         bestTarget = None
         bestTargetHealth = None
 
@@ -180,7 +226,7 @@ class Face(ABC):
 
 class Fail(Face):
     def __init__(self, owner : Entity):
-        super().__init__("FAIL", owner)
+        super().__init__("FAIL", owner, 0)
 
     def apply(self, game, target : Entity):
         ge.print("nothing happens")
@@ -190,8 +236,8 @@ class Fail(Face):
         return self._selectNone(game)
 
 class Attack(Face):
-    def __init__(self, owner : Entity, dmg):
-        super().__init__("ATTACK"+str(dmg), owner)
+    def __init__(self, owner : Entity, dmg, tier):
+        super().__init__("Attack"+str(dmg), owner, tier)
         self.dmg = dmg
 
     def apply(self, game, target : Entity):
@@ -203,11 +249,11 @@ class Attack(Face):
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
-        return self._selectWeakestOpp(game)
+        return self._selectWeakestOppWithoutTooMuchArmor(game)
 
 class Heal(Face):
-    def __init__(self, owner : Entity, heal):
-        super().__init__("HEAL"+str(heal), owner)
+    def __init__(self, owner : Entity, heal, tier):
+        super().__init__("Heal"+str(heal), owner, tier)
         self.heal = heal
 
     def apply(self, game, target : Entity):
@@ -220,8 +266,8 @@ class Heal(Face):
         return self._selectWeakestFriend(game)
 
 class Armor(Face):
-    def __init__(self, owner : Entity, armor):
-        super().__init__("ARMOR"+str(armor), owner)
+    def __init__(self, owner : Entity, armor, tier):
+        super().__init__("Armor"+str(armor), owner, tier)
         self.armor = armor
 
     def apply(self, game, target: Entity):
@@ -236,8 +282,8 @@ class Armor(Face):
         return self._selectSelf(game)
 
 class Concentration(Face):
-    def __init__(self, owner : Entity):
-        super().__init__("CONCENTRATION", owner)
+    def __init__(self, owner : Entity, tier):
+        super().__init__("Concentration", owner, tier)
 
     def apply(self, game, target: Entity):
         """target is ignored"""
@@ -250,8 +296,8 @@ class Concentration(Face):
         return self._selectNone(game)
 
 class Stun(Face):
-    def __init__(self, owner : Entity):
-        super().__init__("STUN", owner)
+    def __init__(self, owner : Entity, tier):
+        super().__init__("Stun", owner, tier)
     
     def apply(self, game, target: Entity):
         """Target is stunned"""
@@ -267,14 +313,14 @@ class Stun(Face):
         return self._selectWeakestOpp(game)
 
 class Sweep(Face):
-    def __init__(self, owner: Entity, dmg):
-        super().__init__("SWEEP"+str(dmg), owner)
+    def __init__(self, owner: Entity, dmg, tier):
+        super().__init__("Sweep"+str(dmg), owner, tier)
         self.dmg = dmg
 
     def apply(self, game, target: Entity):
         """Target is ignored"""
         for entity in game.entities:
-            if entity.team != self.owner.team:
+            if entity.team != self.owner.team and entity.alive():
                 entity.handleAttack(self.owner.concentration*self.dmg,False)
         self.owner.playedThisTurn = True
 
@@ -282,8 +328,8 @@ class Sweep(Face):
         return self._selectNone(game)
 
 class Fireball(Face):
-    def __init__(self, owner : Entity, dmg):
-        super().__init__("FIREBALL"+str(dmg), owner)
+    def __init__(self, owner : Entity, dmg, tier):
+        super().__init__("Fireball"+str(dmg), owner, tier)
         self.dmg = dmg
 
     def apply(self, game, target : Entity):
@@ -297,45 +343,179 @@ class Fireball(Face):
     def defaultTarget(self, game):
         return self._selectWeakestOpp(game)
 
+class Upgrade(Face):
+    def __init__(self, owner : Entity, tier1Stack, tier2Stack, tier3Stack):
+        super().__init__("Upgrade", owner)
+        self.tier1Stack = tier1Stack
+        self.tier2Stack = tier2Stack
+        self.tier3Stack = tier3Stack
+
+    def apply(self, game, target: Entity):
+        """Target is ignored. always upgrade the weakest face"""
+        weakestFaceIndex = None
+        weakestFaceTier = None
+        for k,v in enumerate(self.owner.faces):
+            if weakestFaceTier is None or v.tier < weakestFaceTier:
+                weakestFaceIndex = k
+                weakestFaceTier = v.tier
+
+        def defaultTarget(self, game):
+            return self._selectSelf(game)
+
+
+class Tank(Face):
+    def __init__(self, owner : Entity):
+        super().__init__("Tank", owner, 4)
+        self.armor = 2
+
+    def apply(self, game, target: Entity):
+        """Target is ignored"""
+        self.owner.taunting = True
+        self.owner.activeArmor = self.owner.concentration*self.armor
+        ge.print(f"{target.name} gains {self.owner.concentration*self.armor} armor")
+        self.owner.playedThisTurn = True
+
+    def defaultTarget(self, game):
+        return self._selectSelf(game)
+
+class Vampire(Face):
+    def __init__(self, owner):
+        super().__init__("Vampire", owner, 4)
+
+    def apply(self, game, target):
+        hpLost = 0
+        if target is None:
+            ge.print("No one to Vampireise")
+        else:
+            hpLost = target.handleAttack(2*self.owner.concentration,True)
+        self.owner.handleHeal(hpLost)
+        self.owner.playedThisTurn = True
+
+    def defaultTarget(self, game):
+        return self._selectWeakestOpp(game)
+
+class King(Face):
+    def __init__(self, owner):
+        super().__init__("King", owner, 4)
+        self.dmg = 2 # Needed for _selectWeakestOppWithoutTooMuchArmor
+        self.heal = 1
+        self.armor = 1
+
+    def apply(self, game, target):
+        if target is None:
+            ge.print("No one to attack")
+        else:
+            target.handleAttack(self.dmg*self.owner.concentration,False)
+        self.owner.handleHeal(self.heal*self.owner.concentration)
+        self.owner.activeArmor = self.armor*self.owner.concentration
+        ge.print(f"{self.owner.name} gains {self.owner.concentration*self.armor} armor")
+        self.owner.playedThisTurn = True
+
+    def defaultTarget(self, game):
+        return self._selectWeakestOppWithoutTooMuchArmor(game)
+
+
+class Paladin(Face):
+    def __init__(self, owner):
+        super().__init__("Paladin", owner, 4)
+
+    def apply(self, game, target):
+        self.owner.immune = True
+        self.owner.playedThisTurn = True
+
+    def defaultTarget(self, game):
+        return self._selectSelf(game)
+
 # UPGRADE IS NOT IMPLEMENTED
-        
-level1Faces = ["Attack1","Attack2","Heal1","Sweep1","Sweep2","Fireball1","Armor2","Armor3"]
-#level2Faces = ["Attack3","Attack4","Heal2","Sweep3","Armor6"]
-#level3Faces = ["Attack5","Attack6","Heal3","Concentration","Fireball3"]
-level2Faces = ["Attack3","Attack4","Heal2","Sweep3","Armor6","Concentration"]
-level3Faces = ["Attack5","Attack6","Fireball3"]
+
+def getListWithMultiplicity(faces, multi):
+    out = []
+    for k in range(len(faces)):
+        out  += [faces[k]]*multi[k]
+    return out
+
+level1Faces =        ["Attack2","Heal1","Sweep1","Fireball1","Armor2"]
+level1multiplicity = [3        ,1      ,1       ,1          ,2       ]
+level1FacesWithMult = getListWithMultiplicity(level1Faces,level1multiplicity)
+
+level2Faces =        ["Attack4","Heal3","Sweep2","Armor6","Concentration","Fireball3"]
+level2multiplicity = [3       ,1      ,2       ,2       ,2              ,2            ]
+level2FacesWithMult = getListWithMultiplicity(level2Faces,level2multiplicity)
+
+level3Faces =        ["Attack6","Fireball5","Sweep5"]
+level3multiplicity = [3       ,1           ,2       ]
+level3FacesWithMult = getListWithMultiplicity(level3Faces,level3multiplicity)
+
+classFaces = ["Tank", "Vampire", "King", "Paladin"]
 
 
-def addSpellByString(player, string):
+allFaces = level1Faces + level2Faces + level3Faces
+
+def createAllLegitDices():
+    out = []
+
+    lvl1Combos = list(itertools.combinations(level1FacesWithMult,2))
+    lvl2Combos = list(itertools.combinations(level2FacesWithMult,1))
+    lvl3Combos = list(itertools.combinations(level3FacesWithMult,1))
+    classCombo = list(itertools.combinations(classFaces,1))
+
+    for lvl1 in lvl1Combos:
+        for lvl2 in lvl2Combos:
+            for lvl3 in lvl3Combos:
+                for classFace in classCombo:
+                    out.append(list(lvl1) + list(lvl2) + list(lvl3) + list(classFaces))
+
+    tierList = [1,1,2,3,4]
+
+    return out, tierList
+
+def addSpellByString(player, string, tier):
     if string[0:3] == "Att":
-        player.faces.append(Attack(player,int(string[-1])))
+        player.faces.append(Attack(player,int(string[-1]), tier))
     elif string[0:3] == "Hea":
-        player.faces.append(Heal(player,int(string[-1])))
+        player.faces.append(Heal(player,int(string[-1]), tier))
     elif string[0:3] == "Swe":
-        player.faces.append(Sweep(player,int(string[-1])))
+        player.faces.append(Sweep(player,int(string[-1]), tier))
     elif string[0:3] == "Fir":
-        player.faces.append(Fireball(player,int(string[-1])))
+        player.faces.append(Fireball(player,int(string[-1]), tier))
     elif string[0:3] == "Arm":
-        player.faces.append(Armor(player,int(string[-1])))
+        player.faces.append(Armor(player,int(string[-1]), tier))
     elif string[0:3] == "Con":
-        player.faces.append(Concentration(player))
+        player.faces.append(Concentration(player, tier))
+    elif string[0:3] == "Tan":
+        player.faces.append(Tank(player))
+    elif string[0:3] == "Vam":
+        player.faces.append(Vampire(player))
+    elif string[0:3] == "Kin":
+        player.faces.append(King(player))
+    elif string[0:3] == "Pal":
+        player.faces.append(Paladin(player))
     else:
         assert False, "WEIRD"
 
-def addAllSpellsToPlayer(player, spells):
+def addAllSpellsToPlayer(player, spells, tier):
     for spell in spells:
-        addSpellByString(player, spell)
+        addSpellByString(player, spell, tier)
 
 
-def createLegitPlayer(hp, name, team):
+def createLegitRandomPlayer(hp, name, team):
     p = Entity(hp,name,team)
-    lvl1Indexes = getNIndexesRandomly(level1Faces,2,False)
-    lvl2Indexes = getNIndexesRandomly(level2Faces,1,False)
-    lvl3Indexes = getNIndexesRandomly(level3Faces,1,False)
-    addSpellByString(p,level1Faces[lvl1Indexes[0]])
-    addSpellByString(p,level1Faces[lvl1Indexes[1]])
-    addSpellByString(p,level2Faces[lvl2Indexes[0]])
-    addSpellByString(p,level3Faces[lvl3Indexes[0]])
+    lvl1Indexes = getNIndexesRandomly(level1FacesWithMult,2,False)
+    lvl2Indexes = getNIndexesRandomly(level2FacesWithMult,1,False)
+    lvl3Indexes = getNIndexesRandomly(level3FacesWithMult,1,False)
+    classIndex = getNIndexesRandomly(classFaces,1,False)
+    addSpellByString(p,level1FacesWithMult[lvl1Indexes[0]],1)
+    addSpellByString(p,level1FacesWithMult[lvl1Indexes[1]],1)
+    addSpellByString(p,level2FacesWithMult[lvl2Indexes[0]],2)
+    addSpellByString(p,level3FacesWithMult[lvl3Indexes[0]],3)
+    addSpellByString(p,classFaces[classIndex[0]],4)
+    p.faces.append(Fail(p))
+    return p
+
+def createPlayer(hp, name, team, dice, tierlist):
+    p = Entity(hp,name,team)
+    for k,faceName in enumerate(dice):
+        addSpellByString(p,faceName,tierlist[k])
     p.faces.append(Fail(p))
     return p
 
@@ -346,77 +526,6 @@ def preparePlayerForBattle(player, hp, team):
     player.resetEffects()
     player.hp = hp
     player.team=team
-
-def battleOfPlayerMissingOneSpell(listOfSpells, nbPlayerPerSide):
-    hp = 20
-    nbOfSpells = len(listOfSpells)
-    nbPlayers = nbOfSpells + 1
-    players = []
-    victories = [0]*nbPlayers
-    gamePlayed = [0]*nbPlayers
-    for i in range(nbOfSpells):
-        p = Entity(20,"unassigned",0)
-        addAllSpellsToPlayer(p, listOfSpells)
-        facesRemoved = p.faces.pop(i)
-        p.name = "no"+facesRemoved.faceName
-        players.append(p)
-
-    p = Entity(20,"everything",0)
-    addAllSpellsToPlayer(p, listOfSpells)
-    players.append(p)
-
-    alliesI = []
-    alliesJ = []
-
-    for k in range(nbPlayerPerSide-1):
-        alliesI.append(Entity(hp,"allyI",0))
-        addAllSpellsToPlayer(alliesI[-1],listOfSpells)
-        alliesJ.append(Entity(hp,"allyJ",0))
-        addAllSpellsToPlayer(alliesJ[-1],listOfSpells)
-
-    for i in range(len(players)-1):
-        for j in range(i+1,len(players)):
-
-            for _ in range(1000):
-                # get them ready to fight
-                players[i].resetEffects()
-                players[i].hp = hp
-                players[i].team=1
-                gamePlayed[i] += 1
-
-                for k in range(nbPlayerPerSide-1):
-                    alliesI[k].resetEffects()
-                    alliesI[k].hp = hp
-                    alliesI[k].team = 1
-
-                players[j].resetEffects()
-                players[j].hp = hp
-                players[j].team=2
-                gamePlayed[j] += 1
-
-                for k in range(nbPlayerPerSide-1):
-                    alliesJ[k].resetEffects()
-                    alliesJ[k].hp = hp
-                    alliesJ[k].team = 2
-
-                g = Game()
-
-                thisGameParticipants = [players[i],players[j]]+alliesI+alliesJ
-                ordering = getNIndexesRandomly(thisGameParticipants,2*nbPlayerPerSide,True)
-
-                for k in ordering:
-                    g.entities.append(thisGameParticipants[k])
-
-                g.runUntilWinner()
-                winningTeam = g.winningTeam()
-                if winningTeam == players[i].team:
-                    victories[i] += 1
-                if winningTeam == players[j].team:
-                    victories[j] += 1
-
-    for k,player in enumerate(players):
-        print(f"{player.name} \t {victories[k]/gamePlayed[k]*100:.0f} %")
-
 
 def getNIndexesRandomly(elements, N, mustBeDifferent):
     """elements is passed but really, we just need its length"""
@@ -429,70 +538,149 @@ def getNIndexesRandomly(elements, N, mustBeDifferent):
             pickedIndexes.append(allIndexes[randint(0,len(allIndexes)-1)])
     return pickedIndexes
 
-
-def battleOfRandomLegitPlayers(nbPlayerPerSide):
-    hp = 20
-    nbTeams = 1000
-    nbPlayers = nbTeams*nbPlayerPerSide
+def createAllPossiblePlayers(hp):
+    dices, tierlist = createAllLegitDices()
+    nbPlayers = len(dices)
     players = []
+    for k in range(nbPlayers):
+        players.append(createPlayer(hp,"p"+str(k),0,dices[k], tierlist))
+    return players
+
+def createNrandomPlayers(hp, N):
+    players = []
+    for k in range(N):
+        players.append(createLegitRandomPlayer(hp,"p"+str(k),0))
+    return players
+
+def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide=None):
+    if maxNbPlayerPerSide is None:
+        maxNbPlayerPerSide = minNbPlayerPerSide
+    nbPlayers = len(players)
     matchPlayed = [0]*nbPlayers
     wins = [0]*nbPlayers
-    for k in range(nbPlayers):
-        players.append(createLegitPlayer(hp,"p"+str(k),0))
 
-    nbIters = 100000
-    # Sans heal 3 => 963  / 100000
-    # Avec heal 3 => 2174 / 100000 
+    nbIters = nbPlayers*300
     nbUnfinishable = 0
-    for i in range(nbIters):
-        playerIndexes = getNIndexesRandomly(players,2*nbPlayerPerSide,True)
-        teamA = [players[playerIndexes[k]] for k in range(nbPlayerPerSide)]
-        teamB = [players[playerIndexes[k]] for k in range(nbPlayerPerSide,2*nbPlayerPerSide)]
-        for p in  teamA:
-            preparePlayerForBattle(p, hp, 1)
-        for p in  teamB:
-            preparePlayerForBattle(p, hp, 2)
-        contestants = teamA+teamB
-        
-        ordering = getNIndexesRandomly(contestants,2*nbPlayerPerSide,True)
-        g = Game()
-        for k in ordering:
-            g.entities.append(contestants[k])
+    nbOfThrows = [] # A list per numberOfPlayerPer side containing a list of the number of throws per match
+    for nbPlayerPerSide in range(minNbPlayerPerSide,maxNbPlayerPerSide+1):
+        nbOfThrows.append([])
+        for i in range(nbIters):
+            playerIndexes = getNIndexesRandomly(players,2*nbPlayerPerSide,True)
+            teamA = [players[playerIndexes[k]] for k in range(nbPlayerPerSide)] # first ones makes team A
+            teamB = [players[playerIndexes[k]] for k in range(nbPlayerPerSide,2*nbPlayerPerSide)] # second ones makes team B
+            for p in  teamA:
+                preparePlayerForBattle(p, hp, 1)
+            for p in  teamB:
+                preparePlayerForBattle(p, hp, 2)
+            contestants = teamA+teamB
+            
+            ordering = getNIndexesRandomly(contestants,2*nbPlayerPerSide,True)
+            g = Game()
+            for k in ordering:
+                g.entities.append(contestants[k])
 
-        g.runUntilWinner()
-        if g.winningTeam() is not None:
-            for k in range(2*nbPlayerPerSide):
-                matchPlayed[playerIndexes[k]] += 1 # Si personne n'a gagné, on ne compte pas la partie
-            teamAWon = g.winningTeam() == teamA[0].team
-            if teamAWon:
-                for k in range(nbPlayerPerSide):
-                    wins[playerIndexes[k]] += 1
+            gm = GameStat()
+
+            if randint(0,100000) == 0: #une chance sur N que la partie soit affichée
+                ge.set_show_prints(True)
+            g.runUntilWinner(gm)
+            nbOfThrows[-1].append(gm.nbThrows)
+            ge.print("")
+            ge.set_show_prints(False)
+            
+
+            if g.winningTeam() is not None:
+                for k in range(2*nbPlayerPerSide):
+                    matchPlayed[playerIndexes[k]] += 1 # Si personne n'a gagné, on ne compte pas la partie
+                teamAWon = g.winningTeam() == teamA[0].team
+                if teamAWon:
+                    for k in range(nbPlayerPerSide):
+                        wins[playerIndexes[k]] += 1
+                else:
+                    for k in range(nbPlayerPerSide,2*nbPlayerPerSide):
+                        wins[playerIndexes[k]] += 1
             else:
-                for k in range(nbPlayerPerSide,2*nbPlayerPerSide):
-                    wins[playerIndexes[k]] += 1
-        else:
-            nbUnfinishable +=1
+                nbUnfinishable +=1
 
     print(nbUnfinishable, " unfinishables")
     
-    return players,matchPlayed,wins
+    return matchPlayed,wins,nbOfThrows
 
-
-        
-
-import matplotlib.pyplot as plt
-from functools import cmp_to_key
-if __name__ == "__main__":
-    players,matchPlayed,wins = battleOfRandomLegitPlayers(1)
+def giveWinrateOfEveryPlayer(players, matchPlayed, wins):
     winrate = np.array(wins)/np.array(matchPlayed)
-
     def hasBetterWinrate(a,b):
         return a[1] - b[1]
-    
     results = [(players[i],winrate[i]) for i in range(len(players))]
     results = sorted(results, key = cmp_to_key(hasBetterWinrate),reverse=True)
     for r in results[0:20]:
         print(f"{r[0].facesStr()} winrate : {r[1]*100:.0f}%")
 
+
+def giveWinrateOfEveryFace(players, matchPlayed, wins):
     # On compte combien de fois un spell s'est retrouvé sur le dé du vainqueur
     # Problème, certains spells sont moins fréquent que d'autres donc il faut pondérer
+    # On crée un dictionnaire ou pour chaque spell on stock un couple [win, matchPlayed]
+    dico = {}
+    for k in range(len(players)):
+        for face in players[k].faces:
+            if not face.faceName in dico.keys():
+                dico.update({face.faceName : [0,0]})
+            dico[face.faceName][0] += wins[k]
+            dico[face.faceName][1] += matchPlayed[k]
+
+    results = []
+    for k in dico.keys():
+        if dico[k][1]>0:
+            results.append((k,dico[k][0]/dico[k][1]))
+    def hasBetterWinrate(a,b):
+        return a[1] - b[1]
+    results = sorted(results, key = cmp_to_key(hasBetterWinrate),reverse=True)
+
+    for cl in range(4):
+        for r in results:
+            if r[0] in level1Faces and cl == 0:
+                print("[Tier1] ",end="")
+                print(f"{r[0]} winrate : {r[1]*100:.0f}%")
+            elif r[0] in level2Faces and cl == 1:
+                print("[Tier2] ",end="")
+                print(f"{r[0]} winrate : {r[1]*100:.0f}%")
+            elif r[0] in level3Faces and cl == 2:
+                print("[Tier3] ",end="")
+                print(f"{r[0]} winrate : {r[1]*100:.0f}%")
+            elif r[0] in classFaces and cl == 3:
+                print("[Class] ",end="")
+                print(f"{r[0]} winrate : {r[1]*100:.0f}%")
+            
+
+import matplotlib.pyplot as plt
+def analyseGameLength(nbOfThrows, minPlayer, maxPlayer):
+    for k in range(minPlayer,maxPlayer+1):
+        secondsPerThrow = 10
+        time = [throws*secondsPerThrow/60 for throws in nbOfThrows[k-minPlayer]]
+        plt.hist(time, bins=100, edgecolor='black', rwidth=0.8)
+
+        # Ajout des labels
+        plt.xlabel('Valeurs')
+        plt.ylabel('Fréquence')
+        plt.title(f'Temps de jeu a {k} joueurs par équipe')
+
+        # Affichage
+        plt.show()
+
+
+from functools import cmp_to_key
+if __name__ == "__main__":
+    Nmax = len(createAllLegitDices()[0])
+    hp = 20
+
+    minPlays = 1
+    maxPlays = 2
+
+    players = createNrandomPlayers(hp,Nmax//10)
+    matchPlayed,wins,nbThrows = battlePlayers(hp,players,minPlays,maxPlays)
+
+    #giveWinrateOfEveryPlayer(players,matchPlayed,wins)
+    giveWinrateOfEveryFace(players,matchPlayed,wins)
+    analyseGameLength(nbThrows,minPlays,maxPlays)
+
+    
