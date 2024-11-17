@@ -62,7 +62,7 @@ class Game:
     def clearDeadGhouls(self):
         toClear = []
         for entity in self.entities:
-            if entity.isGhoul() and not entity.alive():
+            if entity.isGhoul() and (not entity.alive() or not entity.parent.alive()): # Remove ghoul if lich is dead
                 toClear.append(entity)
         for cl in toClear:
             self.entities.remove(cl)
