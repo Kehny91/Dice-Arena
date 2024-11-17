@@ -53,10 +53,35 @@ class Game:
                 else:
                     ge.print(f"{entityPlaying.name} uses {rolledFace.faceName}, ",end="")
                 rolledFace.apply(self, rolledFace.defaultTarget(self))
+                self.clearDeadGhouls()
 
             i += 1
             if i>=len(self.entities):
                 stop = True
+
+    def clearDeadGhouls(self):
+        toClear = []
+        for entity in self.entities:
+            if entity.isGhoul() and not entity.alive():
+                toClear.append(entity)
+        for cl in toClear:
+            self.entities.remove(cl)
+
+    def clearGhouls(self):
+        toClear = []
+        for entity in self.entities:
+            if entity.isGhoul():
+                toClear.append(entity)
+        for cl in toClear:
+            self.entities.remove(cl)
+
+    def canSpawnGhoul(self):
+        ghoulCount = 0
+        maxGhoulCount = 4
+        for entity in self.entities:
+            if entity.isGhoul():
+                ghoulCount += 1
+        return ghoulCount<maxGhoulCount
 
     def winningTeam(self):
         """Returns None is there is no winner yet, or the winning team"""
@@ -83,6 +108,8 @@ class Game:
                 print("GAME TOO LONG")
                 break
 
+        self.clearGhouls()
+
                 
 
 class Entity:
@@ -101,6 +128,9 @@ class Entity:
 
     def alive(self):
         return self.hp > 0
+    
+    def isGhoul(self):
+        return self.parent is not None
     
     def resetEffects(self):
         """Called before rerolling the dice. DO NOT CALL WHEN REROLLING AFTER CONCENTRATION"""
@@ -203,6 +233,7 @@ class Face(ABC):
         return bestTarget
     
     def _selectWeakestFriend(self, game : Game):
+        """ Does not select ghoul """
         taunter = self.owner.isTauntedBy(game)
         if taunter is not None:
             return taunter
@@ -211,7 +242,7 @@ class Face(ABC):
         bestTargetHealth = None
 
         for entity in game.entities:
-            if entity.alive() and entity.team == self.owner.team:
+            if entity.alive() and entity.team == self.owner.team and not entity.isGhoul():
                 if bestTarget is None or entity.hp < bestTarget.hp:
                     bestTarget = entity
                     bestTargetHealth = entity.hp
@@ -366,7 +397,7 @@ class Upgrade(Face):
 class Tank(Face):
     def __init__(self, owner : Entity):
         super().__init__("Tank", owner, 4)
-        self.armor = 2
+        self.armor = 4
 
     def apply(self, game, target: Entity):
         """Target is ignored"""
@@ -426,6 +457,27 @@ class Paladin(Face):
     def defaultTarget(self, game):
         return self._selectSelf(game)
 
+class Lich(Face):
+    def __init__(self, owner):
+        super().__init__("Lich", owner, 4)
+
+    def apply(self, game : Game, target):
+        """target is ignored"""
+        nbOfGhoulsToSpawn = 1*self.owner.concentration
+        for k in range(nbOfGhoulsToSpawn):
+            if game.canSpawnGhoul():
+                ghoul = createGhoul(self.owner)
+                ghoul.playedThisTurn = True # Ghoul cannot play immediatly
+                ge.print("ghoul spawned")
+                game.entities.append(ghoul)
+            else:
+                ge.print("too many ghouls")
+        self.owner.playedThisTurn = True
+
+    def defaultTarget(self, game):
+        return self._selectSelf(game)
+
+
 # UPGRADE IS NOT IMPLEMENTED
 
 def getListWithMultiplicity(faces, multi):
@@ -446,7 +498,7 @@ level3Faces =        ["Attack6","Fireball5","Sweep5"]
 level3multiplicity = [3       ,1           ,2       ]
 level3FacesWithMult = getListWithMultiplicity(level3Faces,level3multiplicity)
 
-classFaces = ["Tank", "Vampire", "King", "Paladin"]
+classFaces = ["Tank", "Vampire", "King", "Paladin", "Lich"]
 
 
 allFaces = level1Faces + level2Faces + level3Faces
@@ -490,6 +542,8 @@ def addSpellByString(player, string, tier):
         player.faces.append(King(player))
     elif string[0:3] == "Pal":
         player.faces.append(Paladin(player))
+    elif string[0:3] == "Lic":
+        player.faces.append(Lich(player))
     else:
         assert False, "WEIRD"
 
@@ -517,6 +571,18 @@ def createPlayer(hp, name, team, dice, tierlist):
     for k,faceName in enumerate(dice):
         addSpellByString(p,faceName,tierlist[k])
     p.faces.append(Fail(p))
+    return p
+
+
+def createGhoul(father : Entity):
+    ghoulHp = 1
+    p = Entity(ghoulHp, "Ghoul", father.team, father)
+    p.faces.append(Fail(p))
+    p.faces.append(Fail(p))
+    p.faces.append(Fail(p))
+    p.faces.append(Fail(p))
+    p.faces.append(Attack(p,2,1))
+    p.faces.append(Attack(p,1,1))
     return p
 
 teamOne = 1
