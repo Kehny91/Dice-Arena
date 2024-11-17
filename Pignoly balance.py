@@ -198,6 +198,7 @@ class Face(ABC):
         pass
 
     def _selectWeakestOpp(self, game : Game):
+        """ Prefer not to select ghouls as it is better to kill the Lich"""
         taunter = self.owner.isTauntedBy(game)
         if taunter is not None:
             return taunter
@@ -207,14 +208,15 @@ class Face(ABC):
 
         for entity in game.entities:
             if entity.alive() and entity.team != self.owner.team:
-                if bestTarget is None or entity.hp < bestTarget.hp:
+                malus = 20 if entity.isGhoul() else 0
+                if bestTarget is None or entity.hp + malus < bestTarget.hp:
                     bestTarget = entity
                     bestTargetHealth = entity.hp
         
         return bestTarget
 
     def _selectWeakestOppWithoutTooMuchArmor(self, game : Game):
-        """Special case : avoid hitting someone under armor"""
+        """Avoid hitting someone under armor. Prefer not to select ghouls as it is better to kill the Lich"""
         taunter = self.owner.isTauntedBy(game)
         if taunter is not None:
             return taunter
@@ -225,7 +227,8 @@ class Face(ABC):
         for entity in game.entities:
             if entity.alive() and entity.team != self.owner.team:
                 tooMuchArmor = entity.activeArmor >= self.dmg
-                if bestTarget is None or (entity.hp < bestTarget.hp and not tooMuchArmor):
+                malus = 20 if entity.isGhoul() else 0
+                if bestTarget is None or (entity.hp + malus < bestTarget.hp and not tooMuchArmor):
                     # Check if under too much armor
                     bestTarget = entity
                     bestTargetHealth = entity.hp
@@ -233,7 +236,7 @@ class Face(ABC):
         return bestTarget
     
     def _selectWeakestFriend(self, game : Game):
-        """ Does not select ghoul """
+        """ Does not select ghoul as they can't be healed """
         taunter = self.owner.isTauntedBy(game)
         if taunter is not None:
             return taunter
@@ -494,7 +497,7 @@ level2Faces =        ["Attack4","Heal3","Sweep2","Armor6","Concentration","Fireb
 level2multiplicity = [3       ,1      ,2       ,2       ,2              ,2            ]
 level2FacesWithMult = getListWithMultiplicity(level2Faces,level2multiplicity)
 
-level3Faces =        ["Attack6","Fireball5","Sweep5"]
+level3Faces =        ["Attack6","Fireball5","Sweep4"]
 level3multiplicity = [3       ,1           ,2       ]
 level3FacesWithMult = getListWithMultiplicity(level3Faces,level3multiplicity)
 
@@ -647,6 +650,7 @@ def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide=None):
 
             gm = GameStat()
 
+
             if randint(0,100000) == 0: #une chance sur N que la partie soit affichée
                 ge.set_show_prints(True)
             g.runUntilWinner(gm)
@@ -739,7 +743,7 @@ if __name__ == "__main__":
     Nmax = len(createAllLegitDices()[0])
     hp = 20
 
-    minPlays = 1
+    minPlays = 2
     maxPlays = 2
 
     players = createNrandomPlayers(hp,Nmax//10)
