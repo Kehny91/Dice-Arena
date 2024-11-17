@@ -95,13 +95,14 @@ class Game:
         else:
             return None
         
-    def runUntilWinner(self, gameStat = None):
-        turn = 0
+    def runUntilWinner(self, maxTime_min, gameStat = None):
+        if gameStat is None:
+            gameStat = GameStat()
         while self.winningTeam() is None:
             self.newTurn(gameStat)
-            turn +=1
-            timePerTurn_min = len(self.entities)*10/60 # Chacun prend 10 s pour lancer
-            if turn*timePerTurn_min > 40:
+            timePerThrow_min = 10/60
+            actualTime_min = gameStat.nbThrows*timePerThrow_min
+            if actualTime_min > maxTime_min:
                 print("")
                 for p in self.entities:
                     p.debug()
@@ -125,6 +126,7 @@ class Entity:
         self.playedThisTurn = False
         self.team = team
         self.taunting = False
+        self.facesBackup = []
 
     def alive(self):
         return self.hp > 0
@@ -181,6 +183,15 @@ class Entity:
     def debug(self):
         print(f"{self.name} : Team {self.team} HP {self.hp} faces : ",end="")
         print(self.facesStr())
+
+    def backupFaces(self):
+        for f in self.faces:
+            self.facesBackup.append(f)
+
+    def restoreFaces(self):
+        self.faces = []
+        for f in self.facesBackup:
+            self.faces.append(f)
 
 class Face(ABC):
     def __init__(self, name, owner : Entity, tier):

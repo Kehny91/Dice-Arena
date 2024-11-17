@@ -123,7 +123,7 @@ class Fireball(Face):
 class Upgrade(Face):
     """Concentration is ignored"""
     def __init__(self, owner : Entity, tier1Stack, tier2Stack, tier3Stack):
-        super().__init__("Upgrade", owner)
+        super().__init__("Upgrade", owner, 4)
         self.tierStack = [tier1Stack,tier2Stack,tier3Stack]
 
     def apply(self, game, target: Entity):
@@ -131,16 +131,21 @@ class Upgrade(Face):
         weakestFaceIndex = None
         weakestFaceTier = None
         for k,v in enumerate(self.owner.faces):
-            if weakestFaceTier is None or v.tier < weakestFaceTier:
+            if v.tier<4 and (weakestFaceTier is None or v.tier < weakestFaceTier):
                 weakestFaceIndex = k
                 weakestFaceTier = v.tier
 
-        index  = getNIndexesRandomly(self.tierStack[max(weakestFaceTier+1,3)],1,False)[0]
-        self.owner.faces.pop(weakestFaceIndex)
-        self.owner.faces.insert(weakestFaceIndex,self.tierStack[max(weakestFaceTier+1,3)][index])
+        assert weakestFaceTier is not None, "WEIRD"
+        newFaceTier = min(weakestFaceTier+1, 3)
 
-        def defaultTarget(self, game):
-            return self._selectSelf(game)
+        index  = getNIndexesRandomly(self.tierStack[newFaceTier-1],1,False)[0] # minus one because of indexes
+        self.owner.faces.pop(weakestFaceIndex)
+        addSpellByString(self.owner,self.tierStack[newFaceTier-1][index],newFaceTier)
+        self.owner.playedThisTurn = True
+
+
+    def defaultTarget(self, game):
+        return self._selectSelf(game)
 
 class Tank(Face):
     def __init__(self, owner : Entity):
@@ -263,7 +268,3 @@ def addSpellByString(player, string, tier):
         player.faces.append(Fail(player))
     else:
         assert False, "WEIRD"
-
-def addAllSpellsByString(player, spells, tier):
-    for spell in spells:
-        addSpellByString(player, spell, tier)

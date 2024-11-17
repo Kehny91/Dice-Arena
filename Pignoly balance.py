@@ -1,5 +1,6 @@
 from core import Entity,Game,GameStat,getNIndexesRandomly,ge
 from faces import addSpellByString
+import faces
 from random import randint
 import numpy as np
 import itertools
@@ -24,14 +25,54 @@ level2FacesWithMult = getListWithMultiplicity(level2Faces,level2multiplicity)
 level3Faces =        ["Attack6","Fireball5","Sweep4"]
 level3multiplicity = [3       ,1           ,2       ]
 level3FacesWithMult = getListWithMultiplicity(level3Faces,level3multiplicity)
-
 classFaces = ["Tank", "Vampire", "King", "Paladin", "Lich"]
 
+nbOfDifferentDices1123CF = sum(level1multiplicity)*sum(level2multiplicity)*sum(level3multiplicity)*len(classFaces)
 
-allFaces = level1Faces + level2Faces + level3Faces
+def createPlayer(hp, name, team, dice, tierlist):
+    p = Entity(hp,name,team)
+    for k,faceName in enumerate(dice):
+        addSpellByString(p,faceName,tierlist[k])
+    return p
 
-def createAllLegitDices():
-    out = []
+def createRandomPlayer(hp, name, team, repartition : str):
+    """
+        1 - Tier 1
+        2 - Tier 2
+        3 - Tier 3
+        F - Fail
+        C - Class
+        U - Upgrade
+    """
+    nbLevel1 = repartition.count("1")
+    nbLevel2 = repartition.count("2")
+    nbLevel3 = repartition.count("3")
+    nbFail = repartition.count("F")
+    nbClass = repartition.count("C")
+    nbUpgrade = repartition.count("U")
+
+    p = Entity(hp,name,team)
+    lvl1Indexes = getNIndexesRandomly(level1FacesWithMult,nbLevel1,False)
+    lvl2Indexes = getNIndexesRandomly(level2FacesWithMult,nbLevel2,False)
+    lvl3Indexes = getNIndexesRandomly(level3FacesWithMult,nbLevel3,False)
+    classIndex = getNIndexesRandomly(classFaces,nbClass,False)
+    for i in lvl1Indexes:
+        addSpellByString(p, level1FacesWithMult[i],1)
+    for i in lvl2Indexes:
+        addSpellByString(p, level2FacesWithMult[i],2)
+    for i in lvl3Indexes:
+        addSpellByString(p, level3FacesWithMult[i],3)
+    for i in classIndex:
+        addSpellByString(p, classFaces[i],4)
+    for i in range(nbFail):
+        p.faces.append(faces.Fail(p))
+    for i in range(nbUpgrade):
+        p.faces.append(faces.Upgrade(p,level1FacesWithMult,level2FacesWithMult,level3FacesWithMult))
+    p.backupFaces()
+    return p
+
+def createAllPlayers1123CF(hp):
+    dicesStr = []
 
     lvl1Combos = list(itertools.combinations(level1FacesWithMult,2))
     lvl2Combos = list(itertools.combinations(level2FacesWithMult,1))
@@ -42,34 +83,21 @@ def createAllLegitDices():
         for lvl2 in lvl2Combos:
             for lvl3 in lvl3Combos:
                 for classFace in classCombo:
-                    out.append(list(lvl1) + list(lvl2) + list(lvl3) + list(classFaces))
+                    dicesStr.append(list(lvl1) + list(lvl2) + list(lvl3) + list(classFaces) + ["Fail"])
 
-    tierList = [1,1,2,3,4]
+    tierList = [1,1,2,3,4,0]
 
-    return out, tierList
+    nbPlayers = len(dicesStr)
+    players = []
+    for k in range(nbPlayers):
+        players.append(createPlayer(hp,"p"+str(k),0,dicesStr[k], tierList))
+    return players
 
-def createLegitRandomPlayer(hp, name, team):
-    p = Entity(hp,name,team)
-    lvl1Indexes = getNIndexesRandomly(level1FacesWithMult,2,False)
-    lvl2Indexes = getNIndexesRandomly(level2FacesWithMult,1,False)
-    lvl3Indexes = getNIndexesRandomly(level3FacesWithMult,1,False)
-    classIndex = getNIndexesRandomly(classFaces,1,False)
-    addSpellByString(p, level1FacesWithMult[lvl1Indexes[0]],1)
-    addSpellByString(p, level1FacesWithMult[lvl1Indexes[1]],1)
-    addSpellByString(p, level2FacesWithMult[lvl2Indexes[0]],2)
-    addSpellByString(p, level3FacesWithMult[lvl3Indexes[0]],3)
-    addSpellByString(p, classFaces[classIndex[0]],4)
-    addSpellByString(p, "Fail",0)
-    return p
-
-def createPlayer(hp, name, team, dice, tierlist):
-    p = Entity(hp,name,team)
-    for k,faceName in enumerate(dice):
-        addSpellByString(p,faceName,tierlist[k])
-    addSpellByString(p,"Fail",0)
-    return p
-
-
+def createNrandomPlayers(hp, N,repartition):
+    players = []
+    for k in range(N):
+        players.append(createRandomPlayer(hp,"p"+str(k),0,repartition))
+    return players
 
 teamOne = 1
 teamTwo = 2
@@ -78,24 +106,9 @@ def preparePlayerForBattle(player, hp, team):
     player.resetEffects()
     player.hp = hp
     player.team=team
+    player.restoreFaces()
 
-def createAllPossiblePlayers(hp):
-    dices, tierlist = createAllLegitDices()
-    nbPlayers = len(dices)
-    players = []
-    for k in range(nbPlayers):
-        players.append(createPlayer(hp,"p"+str(k),0,dices[k], tierlist))
-    return players
-
-def createNrandomPlayers(hp, N):
-    players = []
-    for k in range(N):
-        players.append(createLegitRandomPlayer(hp,"p"+str(k),0))
-    return players
-
-def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide=None):
-    if maxNbPlayerPerSide is None:
-        maxNbPlayerPerSide = minNbPlayerPerSide
+def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_min):
     nbPlayers = len(players)
     matchPlayed = [0]*nbPlayers
     wins = [0]*nbPlayers
@@ -120,13 +133,13 @@ def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide=None):
             for k in ordering:
                 g.entities.append(contestants[k])
 
-            gm = GameStat()
+            gs = GameStat()
 
 
             if randint(0,100000) == 0: #une chance sur N que la partie soit affichée
                 ge.set_show_prints(True)
-            g.runUntilWinner(gm)
-            nbOfThrows[-1].append(gm.nbThrows)
+            g.runUntilWinner(maxTime_min, gs)
+            nbOfThrows[-1].append(gs.nbThrows)
             ge.print("")
             ge.set_show_prints(False)
             
@@ -147,15 +160,6 @@ def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide=None):
     print(nbUnfinishable, " unfinishables")
     
     return matchPlayed,wins,nbOfThrows
-
-def giveWinrateOfEveryPlayer(players, matchPlayed, wins):
-    winrate = np.array(wins)/np.array(matchPlayed)
-    def hasBetterWinrate(a,b):
-        return a[1] - b[1]
-    results = [(players[i],winrate[i]) for i in range(len(players))]
-    results = sorted(results, key = cmp_to_key(hasBetterWinrate),reverse=True)
-    for r in results[0:20]:
-        print(f"{r[0].facesStr()} winrate : {r[1]*100:.0f}%")
 
 
 def giveWinrateOfEveryFace(players, matchPlayed, wins):
@@ -199,7 +203,7 @@ def analyseGameLength(nbOfThrows, minPlayer, maxPlayer):
     for k in range(minPlayer,maxPlayer+1):
         secondsPerThrow = 10
         time = [throws*secondsPerThrow/60 for throws in nbOfThrows[k-minPlayer]]
-        plt.hist(time, bins=100, edgecolor='black', rwidth=0.8)
+        plt.hist(time, bins=120, edgecolor='black', rwidth=0.8)
 
         # Ajout des labels
         plt.xlabel('Valeurs')
@@ -212,17 +216,15 @@ def analyseGameLength(nbOfThrows, minPlayer, maxPlayer):
 
 from functools import cmp_to_key
 if __name__ == "__main__":
-    Nmax = len(createAllLegitDices()[0])
+    Nmax = nbOfDifferentDices1123CF
     hp = 20
 
-    minPlays = 2
-    maxPlays = 2
+    minPlays = 1
+    maxPlays = 3
 
-    players = createNrandomPlayers(hp,Nmax//10)
-    matchPlayed,wins,nbThrows = battlePlayers(hp,players,minPlays,maxPlays)
+    players = createNrandomPlayers(hp,Nmax//10,"1122CU")
+    matchPlayed,wins,nbThrows = battlePlayers(hp,players,minPlays,maxPlays,60)
 
     #giveWinrateOfEveryPlayer(players,matchPlayed,wins)
     giveWinrateOfEveryFace(players,matchPlayed,wins)
     analyseGameLength(nbThrows,minPlays,maxPlays)
-
-    
