@@ -4,7 +4,7 @@ import faces
 from random import randint
 import numpy as np
 import itertools
-
+import multiprocessing as mp
 
 # UPGRADE IS NOT IMPLEMENTED
 
@@ -71,28 +71,6 @@ def createRandomPlayer(hp, name, team, repartition : str):
     p.backupFaces()
     return p
 
-def createAllPlayers1123CF(hp):
-    dicesStr = []
-
-    lvl1Combos = list(itertools.combinations(level1FacesWithMult,2))
-    lvl2Combos = list(itertools.combinations(level2FacesWithMult,1))
-    lvl3Combos = list(itertools.combinations(level3FacesWithMult,1))
-    classCombo = list(itertools.combinations(classFaces,1))
-
-    for lvl1 in lvl1Combos:
-        for lvl2 in lvl2Combos:
-            for lvl3 in lvl3Combos:
-                for classFace in classCombo:
-                    dicesStr.append(list(lvl1) + list(lvl2) + list(lvl3) + list(classFaces) + ["Fail"])
-
-    tierList = [1,1,2,3,4,0]
-
-    nbPlayers = len(dicesStr)
-    players = []
-    for k in range(nbPlayers):
-        players.append(createPlayer(hp,"p"+str(k),0,dicesStr[k], tierList))
-    return players
-
 def createNrandomPlayers(hp, N,repartition):
     players = []
     for k in range(N):
@@ -105,6 +83,7 @@ teamTwo = 2
 def preparePlayerForBattle(player, hp, team):
     player.resetEffects()
     player.hp = hp
+    player.initialHp = hp
     player.team=team
     player.restoreFaces()
 
@@ -112,54 +91,130 @@ def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_m
     nbPlayers = len(players)
     matchPlayed = [0]*nbPlayers
     wins = [0]*nbPlayers
+    nbOfThrows = [] # A list per numberOfPlayerPer side containing a list of the number of throws per match
 
     nbIters = nbPlayers*300
     nbUnfinishable = 0
-    nbOfThrows = [] # A list per numberOfPlayerPer side containing a list of the number of throws per match
     for nbPlayerPerSide in range(minNbPlayerPerSide,maxNbPlayerPerSide+1):
         nbOfThrows.append([])
         for i in range(nbIters):
+            if i%10000 ==0:
+                print(f"{i/nbIters*100:.2f}%")
             playerIndexes = getNIndexesRandomly(players,2*nbPlayerPerSide,True)
-            teamA = [players[playerIndexes[k]] for k in range(nbPlayerPerSide)] # first ones makes team A
-            teamB = [players[playerIndexes[k]] for k in range(nbPlayerPerSide,2*nbPlayerPerSide)] # second ones makes team B
-            for p in  teamA:
-                preparePlayerForBattle(p, hp, 1)
-            for p in  teamB:
-                preparePlayerForBattle(p, hp, 2)
-            contestants = teamA+teamB
-            
-            ordering = getNIndexesRandomly(contestants,2*nbPlayerPerSide,True)
-            g = Game()
-            for k in ordering:
-                g.entities.append(contestants[k])
-
-            gs = GameStat()
-
-
-            if randint(0,100000) == 0: #une chance sur N que la partie soit affichée
-                ge.set_show_prints(True)
-            g.runUntilWinner(maxTime_min, gs)
-            nbOfThrows[-1].append(gs.nbThrows)
-            ge.print("")
-            ge.set_show_prints(False)
-            
-
-            if g.winningTeam() is not None:
-                for k in range(2*nbPlayerPerSide):
-                    matchPlayed[playerIndexes[k]] += 1 # Si personne n'a gagné, on ne compte pas la partie
-                teamAWon = g.winningTeam() == teamA[0].team
-                if teamAWon:
-                    for k in range(nbPlayerPerSide):
-                        wins[playerIndexes[k]] += 1
-                else:
-                    for k in range(nbPlayerPerSide,2*nbPlayerPerSide):
-                        wins[playerIndexes[k]] += 1
-            else:
+            ok = battleOnce(hp, players, playerIndexes, maxTime_min, nbOfThrows, matchPlayed, wins)
+            if not ok:
                 nbUnfinishable +=1
 
     print(nbUnfinishable, " unfinishables")
     
     return matchPlayed,wins,nbOfThrows
+
+def battleOnce(hp, players, playerIndexes, maxTime_min, nbOfThrows, matchPlayed, wins):
+    nbPlayerPerSide = len(playerIndexes)//2
+
+    teamA = [players[playerIndexes[k]] for k in range(nbPlayerPerSide)] # first ones makes team A
+    teamB = [players[playerIndexes[k]] for k in range(nbPlayerPerSide,2*nbPlayerPerSide)] # second ones makes team B
+    contestants = teamA+teamB
+    
+    ordering = getNIndexesRandomly(contestants,2*nbPlayerPerSide,True)
+    g = Game()
+    for k in ordering:
+        g.entities.append(contestants[k])
+
+    for p in  teamA:
+        preparePlayerForBattle(p, hp, 1)
+    for p in  teamB:
+        preparePlayerForBattle(p, hp, 2)
+
+    gs = GameStat()
+    if randint(0,100000) == -1: #une chance sur N que la partie soit affichée
+        ge.set_show_prints(True)
+    g.runUntilWinner(maxTime_min, gs)
+    nbOfThrows[-1].append(gs.nbThrows)
+    ge.print("")
+    ge.set_show_prints(False)
+
+    if g.winningTeam() is not None:
+        for k in range(2*nbPlayerPerSide):
+            matchPlayed[playerIndexes[k]] += 1 # Si personne n'a gagné, on ne compte pas la partie
+        teamAWon = g.winningTeam() == teamA[0].team
+        if teamAWon:
+            for k in range(nbPlayerPerSide):
+                wins[playerIndexes[k]] += 1
+        else:
+            for k in range(nbPlayerPerSide,2*nbPlayerPerSide):
+                wins[playerIndexes[k]] += 1
+        return True
+    else:
+        return False
+    
+def battlePlayersOnPredefinedMatchs(hp, players, playerIndexesArray, maxTime_min, matchPlayed, wins): # Does not support nb of throws stat
+    # As a process have its own separate memory, players are copied. There is no risk of race conditions
+    nbPlayers = len(players)
+    localMatchPlayed = [0]*nbPlayers
+    localWins = [0]*nbPlayers
+    localNbOfThrows = [[]] # Dummy array -> will not use
+    i = 0
+    for playerIndexes in playerIndexesArray:
+        if i%1000 == 0:
+            print(f"{i}/{len(playerIndexesArray)}")
+        battleOnce(hp, players, playerIndexes, maxTime_min, localNbOfThrows, localMatchPlayed, localWins)
+        i += 1
+    
+    for k in range(nbPlayers):
+        matchPlayed[k] += localMatchPlayed[k]
+        wins[k] += localWins[k]
+
+
+def generate_matches(players, nbPlayerPerSide, nbMatches):
+    """Generate a list of matches, each match is a tuple of player indexes."""
+    matches = []
+    for _ in range(nbMatches):
+        playerIndexes = getNIndexesRandomly(players, 2 * nbPlayerPerSide, True)
+        matches.append(playerIndexes)
+    return matches
+
+def divide_matches(matches, n):
+    """Divide matches into n roughly equal-sized chunks."""
+    chunk_size = len(matches) // n
+    remainder = len(matches) % n
+    chunks = []
+    start = 0
+
+    for i in range(n):
+        end = start + chunk_size + (1 if i < remainder else 0)
+        chunks.append(matches[start:end])
+        start = end
+
+    return chunks
+
+def workerWrapper(args):
+    battlePlayersOnPredefinedMatchs(*args)
+
+
+def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_min):
+    """ Does not count nb of throws"""
+
+    nbPlayers = len(players)
+
+    manager = mp.Manager()
+    matchPlayed = manager.list([0]*nbPlayers)
+    wins = manager.list([0]*nbPlayers)
+   
+
+    nbIters = nbPlayers*300
+    matches = []
+    for nbPlayerPerSide in range(minNbPlayerPerSide,maxNbPlayerPerSide+1):
+        matches += generate_matches(players, nbPlayerPerSide, nbIters)
+    
+    proc = 8
+    matchBatches = divide_matches(matches, proc)
+    args = [ (hp, players, matchBatches[i], maxTime_min, matchPlayed, wins) for i in range(proc) ]
+
+    with mp.Pool(proc) as pool:
+        pool.map(workerWrapper, args)
+    
+    return list(matchPlayed),list(wins),[[]]
 
 
 def giveWinrateOfEveryFace(players, matchPlayed, wins):
@@ -219,12 +274,17 @@ if __name__ == "__main__":
     Nmax = nbOfDifferentDices1123CF
     hp = 20
 
-    minPlays = 1
-    maxPlays = 3
+    minPlayersPerSide = 1
+    maxPlayersPerSide = 3
 
-    players = createNrandomPlayers(hp,Nmax//10,"1122CU")
-    matchPlayed,wins,nbThrows = battlePlayers(hp,players,minPlays,maxPlays,60)
+    players = createNrandomPlayers(hp,Nmax//2,"F112CU")
+
+    # matchPlayed,wins,nbThrows = battlePlayers(hp,players,minPlayersPerSide,maxPlayersPerSide,60) # => 9 minutes
+
+    matchPlayed,wins,nbThrows = battlePlayersMultiproc(hp,players,minPlayersPerSide,maxPlayersPerSide,60) # => 3 minutes
+
+
 
     #giveWinrateOfEveryPlayer(players,matchPlayed,wins)
     giveWinrateOfEveryFace(players,matchPlayed,wins)
-    analyseGameLength(nbThrows,minPlays,maxPlays)
+    #analyseGameLength(nbThrows,minPlays,maxPlays)

@@ -3,7 +3,6 @@ from random import randint
 import numpy as np
 
 
-
 class GameEngine:
     def __init__(self):
         self.showPrints = False
@@ -26,6 +25,12 @@ class GameStat:
         self.nbThrows = 0
 
 class Game:
+
+    canOverHeal = False
+    vampireStealInitialHealth = True
+    ghoulsAreEnraged = True
+    canGhoulAttackImmediatly = True
+
     def __init__(self):
         self.entities = []
 
@@ -118,6 +123,7 @@ class Entity:
         self.parent = parent
         self.faces = []
         self.hp = hp
+        self.initialHp = hp
         self.name = name
         self.activeArmor = 0
         self.immune = False
@@ -167,6 +173,8 @@ class Entity:
 
     def handleHeal(self, heal):
         self.hp += heal
+        if not Game.canOverHeal:
+            self.hp = min(self.hp, self.initialHp)
         ge.print(f"{self.name} heals {heal} hp")
 
     def isTauntedBy(self, game : Game):
@@ -194,10 +202,11 @@ class Entity:
             self.faces.append(f)
 
 class Face(ABC):
-    def __init__(self, name, owner : Entity, tier):
+    def __init__(self, name, owner : Entity, tier, isRemovable):
         self.faceName = name
         self.owner = owner
         self.tier = tier
+        self.isRemovable = isRemovable
     
     @abstractmethod
     def defaultTarget(self, game):
@@ -247,19 +256,20 @@ class Face(ABC):
         return bestTarget
     
     def _selectWeakestFriend(self, game : Game):
-        """ Does not select ghoul as they can't be healed """
+        """ Does not select ghoul as they can't be healed. Also dpes not select entity at max health (if cannot overheal) """
         taunter = self.owner.isTauntedBy(game)
         if taunter is not None:
             return taunter
 
-        bestTarget = None
-        bestTargetHealth = None
+        bestTarget = self.owner
+        bestTargetHealth = self.owner.hp
 
         for entity in game.entities:
             if entity.alive() and entity.team == self.owner.team and not entity.isGhoul():
-                if bestTarget is None or entity.hp < bestTarget.hp:
-                    bestTarget = entity
-                    bestTargetHealth = entity.hp
+                if not Game.canOverHeal and entity.hp < entity.initialHp:
+                    if bestTarget is None or entity.hp < bestTarget.hp:
+                        bestTarget = entity
+                        bestTargetHealth = entity.hp
         
         return bestTarget
     

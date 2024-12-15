@@ -1,9 +1,9 @@
 from core import Face,Entity,Game,getNIndexesRandomly,ge
-
+from typing import override
 
 class Fail(Face):
     def __init__(self, owner : Entity):
-        super().__init__("FAIL", owner, 0)
+        super().__init__("FAIL", owner, 0, True)
 
     def apply(self, game, target : Entity):
         ge.print("nothing happens")
@@ -11,10 +11,15 @@ class Fail(Face):
 
     def defaultTarget(self, game):
         return self._selectNone(game)
+    
+class GhoulFail(Fail):
+    def __init__(self, owner):
+        super().__init__("FAIL", owner)
+        self.isRemovable = False
 
 class Attack(Face):
     def __init__(self, owner : Entity, dmg, tier):
-        super().__init__("Attack"+str(dmg), owner, tier)
+        super().__init__("Attack"+str(dmg), owner, tier, True)
         self.dmg = dmg
 
     def apply(self, game, target : Entity):
@@ -27,10 +32,25 @@ class Attack(Face):
 
     def defaultTarget(self, game):
         return self._selectWeakestOppWithoutTooMuchArmor(game)
+    
+class GhoulAttack(Attack):
+    def __init__(self, owner : Entity, dmg, tier):
+        super().__init__(owner, dmg, tier)
+        self.isRemovable = False
+
+    @override
+    def apply(self, game, target : Entity):
+        """target must be the one to attack"""
+        if target is None:
+            ge.print("No one to attack")
+        else:
+            target.handleAttack(self.owner.concentration*self.dmg,False)
+        self.owner.playedThisTurn = False # That is the difference with normal attack !
+
 
 class Heal(Face):
     def __init__(self, owner : Entity, heal, tier):
-        super().__init__("Heal"+str(heal), owner, tier)
+        super().__init__("Heal"+str(heal), owner, tier, True)
         self.heal = heal
 
     def apply(self, game, target : Entity):
@@ -44,7 +64,7 @@ class Heal(Face):
 
 class Armor(Face):
     def __init__(self, owner : Entity, armor, tier):
-        super().__init__("Armor"+str(armor), owner, tier)
+        super().__init__("Armor"+str(armor), owner, tier, True)
         self.armor = armor
 
     def apply(self, game, target: Entity):
@@ -60,7 +80,7 @@ class Armor(Face):
 
 class Concentration(Face):
     def __init__(self, owner : Entity, tier):
-        super().__init__("Concentration", owner, tier)
+        super().__init__("Concentration", owner, tier, True)
 
     def apply(self, game, target: Entity):
         """target is ignored"""
@@ -74,7 +94,7 @@ class Concentration(Face):
 
 class Stun(Face):
     def __init__(self, owner : Entity, tier):
-        super().__init__("Stun", owner, tier)
+        super().__init__("Stun", owner, tier, True)
     
     def apply(self, game, target: Entity):
         """Target is stunned"""
@@ -91,7 +111,7 @@ class Stun(Face):
 
 class Sweep(Face):
     def __init__(self, owner: Entity, dmg, tier):
-        super().__init__("Sweep"+str(dmg), owner, tier)
+        super().__init__("Sweep"+str(dmg), owner, tier, True)
         self.dmg = dmg
 
     def apply(self, game, target: Entity):
@@ -106,7 +126,7 @@ class Sweep(Face):
 
 class Fireball(Face):
     def __init__(self, owner : Entity, dmg, tier):
-        super().__init__("Fireball"+str(dmg), owner, tier)
+        super().__init__("Fireball"+str(dmg), owner, tier, True)
         self.dmg = dmg
 
     def apply(self, game, target : Entity):
@@ -123,7 +143,7 @@ class Fireball(Face):
 class Upgrade(Face):
     """Concentration is ignored"""
     def __init__(self, owner : Entity, tier1Stack, tier2Stack, tier3Stack):
-        super().__init__("Upgrade", owner, 4)
+        super().__init__("Upgrade", owner, 4, False)
         self.tierStack = [tier1Stack,tier2Stack,tier3Stack]
 
     def apply(self, game, target: Entity):
@@ -149,7 +169,7 @@ class Upgrade(Face):
 
 class Tank(Face):
     def __init__(self, owner : Entity):
-        super().__init__("Tank", owner, 4)
+        super().__init__("Tank", owner, 4, False)
         self.armor = 4
 
     def apply(self, game, target: Entity):
@@ -164,7 +184,7 @@ class Tank(Face):
 
 class Vampire(Face):
     def __init__(self, owner):
-        super().__init__("Vampire", owner, 4)
+        super().__init__("Vampire", owner, 4, False)
 
     def apply(self, game, target):
         hpLost = 0
@@ -172,6 +192,10 @@ class Vampire(Face):
             ge.print("No one to Vampireise")
         else:
             hpLost = target.handleAttack(2*self.owner.concentration,True)
+            if Game.vampireStealInitialHealth:
+                target.initialHp -= hpLost
+        if Game.vampireStealInitialHealth:
+            self.owner.initialHp += hpLost
         self.owner.handleHeal(hpLost)
         self.owner.playedThisTurn = True
 
@@ -180,8 +204,8 @@ class Vampire(Face):
 
 class King(Face):
     def __init__(self, owner):
-        super().__init__("King", owner, 4)
-        self.dmg = 2 # Needed for _selectWeakestOppWithoutTooMuchArmor
+        super().__init__("King", owner, 4, False)
+        self.dmg = 2
         self.heal = 1
         self.armor = 1
 
@@ -201,7 +225,7 @@ class King(Face):
 
 class Paladin(Face):
     def __init__(self, owner):
-        super().__init__("Paladin", owner, 4)
+        super().__init__("Paladin", owner, 4, False)
 
     def apply(self, game, target):
         self.owner.immune = True
@@ -212,7 +236,7 @@ class Paladin(Face):
 
 class Lich(Face):
     def __init__(self, owner):
-        super().__init__("Lich", owner, 4)
+        super().__init__("Lich", owner, 4, False)
 
     def apply(self, game : Game, target):
         """target is ignored"""
@@ -220,7 +244,6 @@ class Lich(Face):
         for k in range(nbOfGhoulsToSpawn):
             if game.canSpawnGhoul():
                 ghoul = createGhoul(self.owner)
-                ghoul.playedThisTurn = True # Ghoul cannot play immediatly
                 ge.print("ghoul spawned")
                 game.entities.append(ghoul)
             else:
@@ -237,8 +260,14 @@ def createGhoul(father : Entity):
     p.faces.append(Fail(p))
     p.faces.append(Fail(p))
     p.faces.append(Fail(p))
-    p.faces.append(Attack(p,2,1))
-    p.faces.append(Attack(p,1,1))
+    if Game.ghoulsAreEnraged:
+        p.faces.append(GhoulAttack(p,2,1))
+        p.faces.append(GhoulAttack(p,1,1))
+    else:
+        p.faces.append(Attack(p,2,1))
+        p.faces.append(Attack(p,1,1))
+    if not Game.canGhoulAttackImmediatly:
+        p.playedThisTurn = True # Ghoul cannot play immediatly
     return p
 
 def addSpellByString(player, string, tier):
