@@ -139,28 +139,68 @@ class Fireball(Face):
 
     def defaultTarget(self, game):
         return self._selectWeakestOpp(game)
+    
+class Poison(Face):
+    def __init__(self, owner : Entity, tier):
+        super().__init__("Poison", owner, tier, True)
+
+    def apply(self, game, target : Entity):
+        """target must be the one to attack"""
+        for _ in range(self.owner.concentration):
+            if target is None:
+                ge.print("No one to poison")
+            else:
+                if game.canSpawnPoison():
+                    target.poisons += 1
+                    ge.print(f"{target.name} gets poisoned")
+                else:
+                    ge.print("Can't spawn more poison")
+        self.owner.playedThisTurn = True
+
+    def defaultTarget(self, game):
+        return self._selectWeakestOpp(game)
+    
+class Bomb(Face):
+    def __init__(self, owner : Entity, tier):
+        super().__init__("Bomb", owner, tier, True)
+
+    def apply(self, game, target : Entity):
+        """target must be the one to attack"""
+        for _ in range(self.owner.concentration):
+            if target is None:
+                ge.print("No one to bomb")
+            else:
+                if game.canSpawnBomb():
+                    target.bombs += 1
+                    ge.print(f"{target.name} has earned a bomb")
+                else:
+                    ge.print("Can't spawn more bombs")
+        self.owner.playedThisTurn = True
+
+    def defaultTarget(self, game):
+        return self._selectWeakestOpp(game)
 
 class Upgrade(Face):
-    """Concentration is ignored"""
     def __init__(self, owner : Entity, tier1Stack, tier2Stack, tier3Stack):
         super().__init__("Upgrade", owner, 4, False)
         self.tierStack = [tier1Stack,tier2Stack,tier3Stack]
 
     def apply(self, game, target: Entity):
         """Target is ignored. always upgrade the weakest face"""
-        weakestFaceIndex = None
-        weakestFaceTier = None
-        for k,v in enumerate(self.owner.faces):
-            if v.tier<4 and (weakestFaceTier is None or v.tier < weakestFaceTier):
-                weakestFaceIndex = k
-                weakestFaceTier = v.tier
+        for _ in range(self.owner.concentration):
+            weakestFaceIndex = None
+            weakestFaceTier = None
+            for k,v in enumerate(self.owner.faces):
+                if v.tier<4 and (weakestFaceTier is None or v.tier < weakestFaceTier):
+                    weakestFaceIndex = k
+                    weakestFaceTier = v.tier
 
-        assert weakestFaceTier is not None, "WEIRD"
-        newFaceTier = min(weakestFaceTier+1, 3)
+            assert weakestFaceTier is not None, "WEIRD"
+            newFaceTier = min(weakestFaceTier+1, 3)
 
-        index  = getNIndexesRandomly(self.tierStack[newFaceTier-1],1,False)[0] # minus one because of indexes
-        self.owner.faces.pop(weakestFaceIndex)
-        addSpellByString(self.owner,self.tierStack[newFaceTier-1][index],newFaceTier)
+            index  = getNIndexesRandomly(self.tierStack[newFaceTier-1],1,False)[0] # minus one because of indexes
+            self.owner.faces.pop(weakestFaceIndex)
+            addSpellByString(self.owner,self.tierStack[newFaceTier-1][index],newFaceTier)
         self.owner.playedThisTurn = True
 
 
@@ -283,6 +323,10 @@ def addSpellByString(player, string, tier):
         player.faces.append(Armor(player,int(string[-1]), tier))
     elif string[0:3] == "Con":
         player.faces.append(Concentration(player, tier))
+    elif string[0:3] == "Poi":
+        player.faces.append(Poison(player, tier))
+    elif string[0:3] == "Bom":
+        player.faces.append(Bomb(player, tier))
     elif string[0:3] == "Tan":
         player.faces.append(Tank(player))
     elif string[0:3] == "Vam":
@@ -296,4 +340,4 @@ def addSpellByString(player, string, tier):
     elif string[0:3] == "Fai":
         player.faces.append(Fail(player))
     else:
-        assert False, "WEIRD"
+        assert False, f"could not create spell {string} of tier {tier}"
