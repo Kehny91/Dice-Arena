@@ -7,41 +7,9 @@ import itertools
 import multiprocessing as mp
 import cProfile
 import os
+from rules import Deck
 
 # UPGRADE IS NOT IMPLEMENTED
-
-def getListWithMultiplicity(faces, multi):
-    out = []
-    for k in range(len(faces)):
-        out  += [faces[k]]*multi[k]
-    return out
-
-level1Faces =        ["Attack2","Heal1","Sweep1","Fireball1","Armor2"]
-level1multiplicity = [3        ,1      ,1       ,1          ,2       ]
-level1FacesWithMult = getListWithMultiplicity(level1Faces,level1multiplicity)
-
-level2Faces =        ["Attack4","Heal3","Sweep2","Armor6","Concentration","Fireball3", "Poison", "Bomb"]
-level2multiplicity = [3       ,1      ,2       ,2       ,2              ,2            ,2       ,2      ]
-level2FacesWithMult = getListWithMultiplicity(level2Faces,level2multiplicity)
-
-level3Faces =        ["Attack6","Fireball5","Sweep4"]
-level3multiplicity = [3       ,1           ,2       ]
-level3FacesWithMult = getListWithMultiplicity(level3Faces,level3multiplicity)
-classFaces = ["Tank", "Vampire", "King", "Paladin", "Lich"]
-
-allSpellsAndClass = level1Faces + level2Faces + level3Faces + classFaces
-
-def getTier(faceName):
-    if faceName in level1Faces:
-        return 1
-    elif faceName in level2Faces:
-        return 2
-    elif faceName in level3Faces:
-        return 3
-    else:
-        assert False, f"unknown tier for {faceName}"
-
-nbOfDifferentDices1123CF = sum(level1multiplicity)*sum(level2multiplicity)*sum(level3multiplicity)*len(classFaces)
 
 def createPlayer(hp, name, team, dice, tierlist):
     p = Entity(hp,name,team)
@@ -61,27 +29,25 @@ def createRandomPlayer(hp, name, team, repartition : str):
     nbLevel1 = repartition.count("1")
     nbLevel2 = repartition.count("2")
     nbLevel3 = repartition.count("3")
-    nbFail = repartition.count("F")
     nbClass = repartition.count("C")
+    nbPerTier = [nbLevel1,nbLevel2,nbLevel3,nbClass] #classes is counted as tier 4
+
+    nbFail = repartition.count("F")
     nbUpgrade = repartition.count("U")
 
     p = Entity(hp,name,team)
-    lvl1Indexes = getNIndexesRandomly(level1FacesWithMult,nbLevel1,False)
-    lvl2Indexes = getNIndexesRandomly(level2FacesWithMult,nbLevel2,False)
-    lvl3Indexes = getNIndexesRandomly(level3FacesWithMult,nbLevel3,False)
-    classIndex = getNIndexesRandomly(classFaces,nbClass,False)
-    for i in lvl1Indexes:
-        addSpellByString(p, level1FacesWithMult[i],1)
-    for i in lvl2Indexes:
-        addSpellByString(p, level2FacesWithMult[i],2)
-    for i in lvl3Indexes:
-        addSpellByString(p, level3FacesWithMult[i],3)
-    for i in classIndex:
-        addSpellByString(p, classFaces[i],4)
+    for tierIndex in [3,0,1,2]: #Start with class
+        facesWithMult = Deck.getFacesWithMult(tierIndex+1)
+        faceIndexes = getNIndexesRandomly(facesWithMult, nbPerTier[tierIndex], True)
+        for i in faceIndexes:
+            addSpellByString(p, facesWithMult[i],tierIndex+1)
+    
     for i in range(nbFail):
         p.faces.append(faces.Fail(p))
+    
     for i in range(nbUpgrade):
-        p.faces.append(faces.Upgrade(p,level1FacesWithMult,level2FacesWithMult,level3FacesWithMult))
+        p.faces.append(faces.Upgrade(p,Deck.getFacesWithMult(1),Deck.getFacesWithMult(2),Deck.getFacesWithMult(3)))
+    
     p.backupFaces()
     return p
 
@@ -90,9 +56,6 @@ def createNrandomPlayers(hp, N,repartition):
     for k in range(N):
         players.append(createRandomPlayer(hp,"p"+str(k),0,repartition))
     return players
-
-teamOne = 1
-teamTwo = 2
 
 def preparePlayerForBattle(player : Entity, hp, team):
     player.resetEffects()
@@ -193,6 +156,16 @@ def divide_matches(matches, n):
 def workerWrapper(args):
     battlePlayersOnPredefinedMatchs(*args)
 
+def profilingWorkerWrapper(args):
+    """Wrapper to profile the worker."""
+    profiler = cProfile.Profile()
+    profiler.enable()
+
+    workerWrapper(args)  # Call the actual worker function
+
+    profiler.disable()
+    profiler.dump_stats(f"worker_profile_{os.getpid()}.prof")
+
 def interleave_elements(lst, category):
     """
     Mixes a list such that grouped elements like [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
@@ -207,16 +180,6 @@ def interleave_elements(lst, category):
             result.append(group[i])
     return result
 
-def profilingWorkerWrapper(args):
-    """Wrapper to profile the worker."""
-    profiler = cProfile.Profile()
-    profiler.enable()
-
-    workerWrapper(args)  # Call the actual worker function
-
-    profiler.disable()
-    profiler.dump_stats(f"worker_profile_{os.getpid()}.prof")
-
 def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_min):
     """ Does not count nb of throws"""
 
@@ -224,7 +187,7 @@ def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, 
 
     manager = mp.Manager()
     dictOfSpellWinrate = manager.dict()
-    for spell in allSpellsAndClass:
+    for spell in Deck.allSpellsAndClass:
         dictOfSpellWinrate[spell] = manager.list([0,0])
 
     nbIters = nbPlayers*300
@@ -244,7 +207,7 @@ def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, 
         pool.map(workerWrapper, args)
         #pool.map(profilingWorkerWrapper, args)
 
-    for spell in allSpellsAndClass:
+    for spell in Deck.allSpellsAndClass:
         dictOfSpellWinrate[spell] = list(dictOfSpellWinrate[spell])
     
     return dict(dictOfSpellWinrate),[[]]
@@ -273,21 +236,23 @@ def giveWinrateOfEveryFace(dictOfSpellWinrate):
         return a[1] - b[1]
     results = sorted(results, key = cmp_to_key(hasBetterWinrate),reverse=True)
 
-    for cl in range(4):
+    def fillWithBlanks(originalStr, width):
+        return originalStr+" "*(width-len(originalStr))
+    
+    maxWidth = 0
+    for spell in Deck.allSpellsAndClass:
+        if len(spell) > maxWidth:
+            maxWidth =  len(spell)
+
+    for tier in [1,2,3,4]:
         print("")
         for r in results:
-            if r[0] in level1Faces and cl == 0:
-                print("[Tier1] ",end="")
-                print(f"{r[0]} winrate : {r[1]*100:.0f}%")
-            elif r[0] in level2Faces and cl == 1:
-                print("[Tier2] ",end="")
-                print(f"{r[0]} winrate : {r[1]*100:.0f}%")
-            elif r[0] in level3Faces and cl == 2:
-                print("[Tier3] ",end="")
-                print(f"{r[0]} winrate : {r[1]*100:.0f}%")
-            elif r[0] in classFaces and cl == 3:
-                print("[Class] ",end="")
-                print(f"{r[0]} winrate : {r[1]*100:.0f}%")
+            if r[0] in Deck.getFaces(tier):
+                if tier == 4:
+                    print("[Class] ",end="")
+                else:
+                    print(f"[Tier{tier}] ",end="")
+                print(f"{fillWithBlanks(r[0], maxWidth)} winrate : {r[1]*100:.0f}%")
             
 
 import matplotlib.pyplot as plt
@@ -330,12 +295,12 @@ def testSpecificMatchup():
 
 from functools import cmp_to_key
 if __name__ == "__main__":
-    profiler = cProfile.Profile()
-    profiler.enable()
+    # profiler = cProfile.Profile()
+    # profiler.enable()
     #testSpecificMatchup()
     
     
-    Nmax = nbOfDifferentDices1123CF
+    Nmax = Deck.nbOfDifferentDices1123CF
     hp = 20
 
     minPlayersPerSide = 1
@@ -347,8 +312,8 @@ if __name__ == "__main__":
     #ge.set_show_prints(True)
     #dictOfSpellWinrate, nbThrows = battlePlayers(hp,players,minPlayersPerSide,maxPlayersPerSide,60) # => 3 minutes
 
-    profiler.disable()
-    profiler.dump_stats("main_profile.prof")
+    # profiler.disable()
+    # profiler.dump_stats("main_profile.prof")
 
     #giveWinrateOfEveryPlayer(players,matchPlayed,wins)
     giveWinrateOfEveryFace(dictOfSpellWinrate)

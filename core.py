@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from random import randint, sample
 import numpy as np
-
+from rules import Rules as R
 
 class GameEngine:
     def __init__(self):
@@ -28,11 +28,6 @@ class GameStat:
         self.nbThrows = 0
 
 class Game:
-
-    canOverHeal = False
-    vampireStealInitialHealth = True
-    ghoulsAreEnraged = True
-    canGhoulAttackImmediatly = True
 
     def __init__(self):
         self.entities = []
@@ -99,25 +94,25 @@ class Game:
 
     def canSpawnGhoul(self):
         ghoulCount = 0
-        maxGhoulCount = 4
+        # maxGhoulCount = 4
         for entity in self.entities:
             if entity.isGhoul():
                 ghoulCount += 1
-        return ghoulCount<maxGhoulCount
+        return ghoulCount<R.maxGhoulCount
     
     def canSpawnPoison(self):
         poisonCount = 0
-        maxPoisonCount = 4
+        # maxPoisonCount = 4
         for entity in self.entities:
             poisonCount += entity.poisons
-        return poisonCount<maxPoisonCount
+        return poisonCount<R.maxPoisonCount
     
     def canSpawnBomb(self):
         bombCount = 0
-        maxBombCount = 4
+        # maxBombCount = 4
         for entity in self.entities:
             bombCount += entity.bombs
-        return bombCount<maxBombCount
+        return bombCount<R.maxBombCount
 
     def winningTeam(self):
         """Returns None if there is no winner yet, or the winning team."""
@@ -186,6 +181,7 @@ class Entity:
         self.activeArmor = 0
         self.immune = False
         self.concentration = 1
+        self.barbarism = 0
         self.stunning = None
         self.playedThisTurn = False
         self.team = team
@@ -193,6 +189,10 @@ class Entity:
         self.facesBackup = []
         self.bombs = 0
         self.poisons = 0
+
+    def buffed(self, base):
+        assert self.barbarism == 0 or self.concentration == 1, "Can't mix concentration and barbarism"
+        return self.concentration*base + self.barbarism
 
     def restoreHP(self, initialHp):
         self._hp = initialHp
@@ -212,6 +212,7 @@ class Entity:
         self.activeArmor = 0
         self.immune = False
         self.concentration = 1
+        self.barbarism = 0
         self.stunning = None
         self.taunting = False
 
@@ -220,16 +221,6 @@ class Entity:
             if entity.stunning == self:
                 return False
         return not self.playedThisTurn and self.alive()
-    
-    # def _onDie(self, game : Game):
-    #     # KILL THE CHILDREN
-    #     toClear = []
-    #     for entity in game.entities:
-    #         if entity.parent == self:
-    #             toClear.append(entity)
-    #     for cl in toClear:
-    #         self.entities.remove(cl)
-
 
     def handleAttack(self, dmg, magic):
         """Take armor into account. Returns hp lost"""
@@ -247,15 +238,12 @@ class Entity:
             ge.print(f"{self.name} is immune")
         self._hp = max(self._hp, 0)
 
-        # if self._hp == 0 and hpLost>0:
-        #     self._onDie(game)
-
         return hpLost
 
     def handleHeal(self, heal):
         assert self.alive(), "WEIRD"
         self._hp += heal
-        if not Game.canOverHeal:
+        if not R.canOverHeal:
             self._hp = min(self._hp, self.initialHp)
         ge.print(f"{self.name} heals {heal} hp")
 
@@ -267,41 +255,33 @@ class Entity:
                     return entity
         return None
     
-    _poisonCuredFaces = 2
-    _poisonDamage = 1
-    _poisonIsMagic = True
     def rollPoisons(self):
         """ handle damage and curing """
         if self.poisons > 0:
             poisonsThisTurn = self.poisons
             for _ in range(poisonsThisTurn):
                 facesRolled = randint(0,5)
-                if facesRolled < Entity._poisonCuredFaces:
+                if facesRolled < R.poisonCuredFaces:
                     # We are cured
                     self.poisons -= 1
                     ge.print(f"{self.name} cured from poison")
                 else:
                     # Get damages
                     ge.print(f"{self.name} is poisoned")
-                    self.handleAttack(Entity._poisonDamage,Entity._poisonIsMagic)
+                    self.handleAttack(R.poisonDamage,R.poisonIsMagic)
 
-    _bombExplosionFaces = 2
-    _bombLeftFaces = 2
-    _bombRightFaces = 2
-    _bombDamage = 6
-    _bombIsMagic = False
     def rollBombs(self):
         """ handle damages and return left, right or exploded depending on face rolled """
         results = []
         if self.bombs > 0:
             for _ in range(self.bombs):
                 facesRolled = randint(0,5)
-                if facesRolled < Entity._bombExplosionFaces:
+                if facesRolled < R.bombExplosionFaces:
                     # We exploded
                     ge.print(f"{self.name} exploded")
-                    self.handleAttack(Entity._bombDamage,Entity._bombIsMagic)
+                    self.handleAttack(R.bombDamage,R.bombIsMagic)
                     results.append("explosion")
-                elif facesRolled < Entity._bombExplosionFaces + Entity._bombLeftFaces:
+                elif facesRolled < R.bombExplosionFaces + R.bombLeftFaces:
                     # Pass bomb left
                     ge.print(f"{self.name} passes bomb left")
                     results.append("left")
@@ -311,8 +291,6 @@ class Entity:
                     results.append("right")
             self.bombs = 0 # Bomb exploded or got passed
         return results
-        
-
 
     def facesStr(self):
         return"|".join([f.faceName for f in self.faces])
@@ -395,7 +373,7 @@ class Face(ABC):
 
         for entity in game.entities:
             if entity.alive() and entity.team == self.owner.team and not entity.isGhoul():
-                if not Game.canOverHeal and entity.getHP() < entity.initialHp:
+                if not R.canOverHeal and entity.getHP() < entity.initialHp:
                     if bestTarget is None or entity.getHP() < bestTarget.getHP():
                         bestTarget = entity
                         bestTargetHealth = entity.getHP()

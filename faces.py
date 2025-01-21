@@ -1,5 +1,6 @@
 from core import Face,Entity,Game,getNIndexesRandomly,ge
 from typing import override
+from rules import Rules as R
 
 class Fail(Face):
     def __init__(self, owner : Entity):
@@ -27,7 +28,7 @@ class Attack(Face):
         if target is None:
             ge.print("No one to attack")
         else:
-            target.handleAttack(self.owner.concentration*self.dmg,False)
+            target.handleAttack(self.owner.buffed(self.dmg),False)
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -44,7 +45,7 @@ class GhoulAttack(Attack):
         if target is None:
             ge.print("No one to attack")
         else:
-            target.handleAttack(self.owner.concentration*self.dmg,False)
+            target.handleAttack(self.owner.buffed(self.dmg),False)
         self.owner.playedThisTurn = False # That is the difference with normal attack !
 
 
@@ -56,7 +57,7 @@ class Heal(Face):
     def apply(self, game, target : Entity):
         """target must be the one to heal"""
         # Target can't be None as the caster is alive
-        target.handleHeal(self.owner.concentration*self.heal)
+        target.handleHeal(self.owner.buffed(self.heal))
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -70,10 +71,10 @@ class Armor(Face):
     def apply(self, game, target: Entity):
         """target must be the one to armor"""
         # Target can't be None as the caster is alive
-        target.activeArmor = self.owner.concentration*self.armor
+        target.activeArmor = self.owner.buffed(self.armor)
         self.owner.playedThisTurn = True
         
-        ge.print(f"{target.name} gains {self.owner.concentration*self.armor} armor")
+        ge.print(f"{target.name} gains {self.owner.buffed(self.armor)} armor")
 
     def defaultTarget(self, game):
         return self._selectSelf(game)
@@ -84,10 +85,11 @@ class Concentration(Face):
 
     def apply(self, game, target: Entity):
         """target is ignored"""
-        self.owner.concentration *= 2
-        ge.print(f"{self.owner.name} concentrates")
-        assert target is None, "WEIRD"
-        # Do not set self.owner.playedThisTurn to True
+        if self.owner.barbarism == 0: # Can't concentrate after barbarism
+            self.owner.concentration *= 2
+            ge.print(f"{self.owner.name} concentrates")
+            assert target is None, "WEIRD"
+            # Do not set self.owner.playedThisTurn to True
             
     def defaultTarget(self, game):
         return self._selectNone(game)
@@ -118,7 +120,7 @@ class Sweep(Face):
         """Target is ignored"""
         for entity in game.entities:
             if entity.team != self.owner.team and entity.alive():
-                entity.handleAttack(self.owner.concentration*self.dmg,False)
+                entity.handleAttack(self.owner.buffed(self.dmg),False)
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -134,7 +136,7 @@ class Fireball(Face):
         if target is None:
             ge.print("No one to fireball")
         else:
-            target.handleAttack(self.owner.concentration*self.dmg,True)
+            target.handleAttack(self.owner.buffed(self.dmg),True)
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -146,7 +148,7 @@ class Poison(Face):
 
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
-        for _ in range(self.owner.concentration):
+        for _ in range(self.owner.buffed(1)):
             if target is None:
                 ge.print("No one to poison")
             else:
@@ -166,7 +168,7 @@ class Bomb(Face):
 
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
-        for _ in range(self.owner.concentration):
+        for _ in range(self.owner.buffed(1)):
             if target is None:
                 ge.print("No one to bomb")
             else:
@@ -187,7 +189,7 @@ class Upgrade(Face):
 
     def apply(self, game, target: Entity):
         """Target is ignored. always upgrade the weakest face"""
-        for _ in range(self.owner.concentration):
+        for _ in range(self.owner.buffed(1)):
             weakestFaceIndex = None
             weakestFaceTier = None
             for k,v in enumerate(self.owner.faces):
@@ -215,8 +217,8 @@ class Tank(Face):
     def apply(self, game, target: Entity):
         """Target is ignored"""
         self.owner.taunting = True
-        self.owner.activeArmor = self.owner.concentration*self.armor
-        ge.print(f"{target.name} gains {self.owner.concentration*self.armor} armor")
+        self.owner.activeArmor = self.owner.buffed(self.armor)
+        ge.print(f"{target.name} gains {self.owner.buffed(self.armor)} armor")
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -231,10 +233,10 @@ class Vampire(Face):
         if target is None:
             ge.print("No one to Vampireise")
         else:
-            hpLost = target.handleAttack(2*self.owner.concentration,True)
-            if Game.vampireStealInitialHealth:
+            hpLost = target.handleAttack(self.owner.buffed(2),True)
+            if R.vampireStealInitialHealth:
                 target.initialHp -= hpLost
-        if Game.vampireStealInitialHealth:
+        if R.vampireStealInitialHealth:
             self.owner.initialHp += hpLost
         self.owner.handleHeal(hpLost)
         self.owner.playedThisTurn = True
@@ -253,10 +255,10 @@ class King(Face):
         if target is None:
             ge.print("No one to attack")
         else:
-            target.handleAttack(self.dmg*self.owner.concentration,False)
-        self.owner.handleHeal(self.heal*self.owner.concentration)
-        self.owner.activeArmor = self.armor*self.owner.concentration
-        ge.print(f"{self.owner.name} gains {self.owner.concentration*self.armor} armor")
+            target.handleAttack(self.owner.buffed(self.dmg),False)
+        self.owner.handleHeal(self.owner.buffed(self.heal))
+        self.owner.activeArmor = self.owner.buffed(self.armor)
+        ge.print(f"{self.owner.name} gains {self.owner.buffed(self.armor)} armor")
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -280,7 +282,7 @@ class Lich(Face):
 
     def apply(self, game : Game, target):
         """target is ignored"""
-        nbOfGhoulsToSpawn = 1*self.owner.concentration
+        nbOfGhoulsToSpawn = self.owner.buffed(1)
         for k in range(nbOfGhoulsToSpawn):
             if game.canSpawnGhoul():
                 ghoul = createGhoul(self.owner)
@@ -293,6 +295,22 @@ class Lich(Face):
     def defaultTarget(self, game):
         return self._selectSelf(game)
     
+class Barbarian(Face):
+    def __init__(self, owner : Entity):
+        super().__init__("Barbarian", owner, 4, False)
+
+    def apply(self, game, target: Entity):
+        """target is ignored"""
+        if self.owner.concentration == 1 and self.owner.getHP() > 1: # Does nothing if the barbarian was concentrating or is too weak
+            self.owner.barbarism += 1
+            self.owner.handleAttack(0,True)
+            ge.print(f"{self.owner.name} is buffed")
+        assert target is None, "WEIRD"
+        # Do not set self.owner.playedThisTurn to True
+            
+    def defaultTarget(self, game):
+        return self._selectNone(game)
+
 def createGhoul(father : Entity):
     ghoulHp = 1
     p = Entity(ghoulHp, "Ghoul", father.team, father)
@@ -300,13 +318,13 @@ def createGhoul(father : Entity):
     p.faces.append(Fail(p))
     p.faces.append(Fail(p))
     p.faces.append(Fail(p))
-    if Game.ghoulsAreEnraged:
+    if R.ghoulsAreEnraged:
         p.faces.append(GhoulAttack(p,2,1))
         p.faces.append(GhoulAttack(p,1,1))
     else:
         p.faces.append(Attack(p,2,1))
         p.faces.append(Attack(p,1,1))
-    if not Game.canGhoulAttackImmediatly:
+    if not R.canGhoulAttackImmediatly:
         p.playedThisTurn = True # Ghoul cannot play immediatly
     return p
 
@@ -337,6 +355,8 @@ def addSpellByString(player, string, tier):
         player.faces.append(Paladin(player))
     elif string[0:3] == "Lic":
         player.faces.append(Lich(player))
+    elif string[0:3] == "Bar":
+        player.faces.append(Barbarian(player))
     elif string[0:3] == "Fai":
         player.faces.append(Fail(player))
     else:
