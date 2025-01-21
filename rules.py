@@ -16,6 +16,11 @@ class Rules:
     maxGhoulCount = 4
     maxPoisonCount = 4
     maxBombCount = 4
+    paladinHeal = 2
+    tankThorns = 2
+    tankArmor = 4
+    barbarianDMG = 1
+    barbarianBuff = 2
 
 
 class Deck:
@@ -30,7 +35,7 @@ class Deck:
     
     @classmethod
     def getTier(cls, faceName):
-        if faceName == "Fail":
+        if faceName == "Fail" or faceName == "Upgrade":
             return 0
         else:
             for tier in range(1,5):

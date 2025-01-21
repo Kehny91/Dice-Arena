@@ -9,12 +9,10 @@ import cProfile
 import os
 from rules import Deck
 
-# UPGRADE IS NOT IMPLEMENTED
-
-def createPlayer(hp, name, team, dice, tierlist):
+def createPlayer(hp, name, team, dice):
     p = Entity(hp,name,team)
     for k,faceName in enumerate(dice):
-        addSpellByString(p,faceName,tierlist[k])
+        addSpellByString(p,faceName,Deck.getTier(faceName))
     return p
 
 def createRandomPlayer(hp, name, team, repartition : str):
@@ -46,7 +44,7 @@ def createRandomPlayer(hp, name, team, repartition : str):
         p.faces.append(faces.Fail(p))
     
     for i in range(nbUpgrade):
-        p.faces.append(faces.Upgrade(p,Deck.getFacesWithMult(1),Deck.getFacesWithMult(2),Deck.getFacesWithMult(3)))
+        p.faces.append(faces.Upgrade(p))
     
     p.backupFaces()
     return p
@@ -75,7 +73,7 @@ def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_m
     for nbPlayerPerSide in range(minNbPlayerPerSide,maxNbPlayerPerSide+1):
         nbOfThrows.append([])
         for i in range(nbIters):
-            if i%100 ==0:
+            if i%1000 ==0:
                 print(f"{i/nbIters*100:.2f}%")
             playerIndexes = getNIndexesRandomly(players,2*nbPlayerPerSide,True)
             throws = battleOnce(hp, players, playerIndexes, maxTime_min,dictOfSpellWinrate)
@@ -105,6 +103,8 @@ def battleOnce(hp, players, playerIndexes, maxTime_min, dictOfSpellWinrate):
     gs = GameStat()
     if randint(0,100000) == -1: #une chance sur N que la partie soit affichée
         ge.set_show_prints(True)
+
+    ge.print("\nNew match\n")
     g.runUntilWinner(maxTime_min, gs)
     ge.print("")
     #ge.set_show_prints(False)
@@ -190,7 +190,7 @@ def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, 
     for spell in Deck.allSpellsAndClass:
         dictOfSpellWinrate[spell] = manager.list([0,0])
 
-    nbIters = nbPlayers*300
+    nbIters = nbPlayers*200
     matches = []
     for nbPlayerPerSide in range(minNbPlayerPerSide,maxNbPlayerPerSide+1):
         matches += generate_matches(players, nbPlayerPerSide, nbIters)
@@ -198,7 +198,7 @@ def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, 
     # interleaving the elements to avoid having all the longest matches stacked at the end, and the simplest at the front
     matches = interleave_elements(matches, maxNbPlayerPerSide-minNbPlayerPerSide +1)
 
-    proc = 10
+    proc = 6
 
     matchBatches = divide_matches(matches, proc)
     args = [ (hp, players, matchBatches[i], maxTime_min, dictOfSpellWinrate) for i in range(proc) ]
@@ -274,23 +274,27 @@ def analyseGameLength(nbOfThrows, minPlayer, maxPlayer):
 def testSpecificMatchup():
     ge.set_show_prints(True)
     hp = 20
-    dice1 = ["King", "Attack2", "Attack4", "Armor2","Poison","Bomb"]
-    dice1TierList = [4,4]+[getTier(f) for f in dice1[2:]]
-    player1 = createPlayer(20, "player1", 1, dice1,dice1TierList)
-    player1.faces.append(faces.Upgrade(player1,level1FacesWithMult,level2FacesWithMult,level3FacesWithMult))
+    dice1 = ["Tank", "Attack2", "Attack4", "Concentration","Poison","Bomb", "Sweep1"]
+    player1 = createPlayer(20, "p1", 1, dice1)
 
-    player2 = createPlayer(20, "player2", 2, dice1,dice1TierList)
-    player2.faces.append(faces.Upgrade(player2,level1FacesWithMult,level2FacesWithMult,level3FacesWithMult))
+    dice2 = ["Barbarian", "Attack2", "Attack4", "Concentration","Poison","Bomb", "Sweep1"]
+    player2 = createPlayer(20, "p2", 1, dice2)
+
+    dice3 = ["Lich", "Attack2", "Attack4", "Armor2","Poison","Concentration", "Sweep1"]
+    player3 = createPlayer(20, "p3", 2, dice3)
+
+    dice4 = ["Paladin", "Attack2", "Attack4", "Armor2","Concentration","Bomb", "Sweep1"]
+    player4 = createPlayer(20, "p4", 2, dice4)
     # Upgrade need a specific call (cannot init by string)
     
     
     game = Game()
     game.entities.append(player1)
     game.entities.append(player2)
+    game.entities.append(player3)
+    game.entities.append(player4)
     game.runUntilWinner(60)
-    import time
-    time.sleep(1)
-    #ge.set_show_prints(False)
+    assert False, "end"
 
 
 from functools import cmp_to_key
@@ -303,18 +307,17 @@ if __name__ == "__main__":
     Nmax = Deck.nbOfDifferentDices1123CF
     hp = 20
 
-    minPlayersPerSide = 1
-    maxPlayersPerSide = 2
+    minPlayersPerSide = 3
+    maxPlayersPerSide = 4
 
-    players = createNrandomPlayers(hp,Nmax//2,"F112CU")
+    players = createNrandomPlayers(hp,Nmax,"F112CU")
     
-    dictOfSpellWinrate, nbThrows = battlePlayersMultiproc(hp,players,minPlayersPerSide,maxPlayersPerSide,60) # => 3 minutes
+    #dictOfSpellWinrate, nbThrows = battlePlayersMultiproc(hp,players,minPlayersPerSide,maxPlayersPerSide,60) 
     #ge.set_show_prints(True)
-    #dictOfSpellWinrate, nbThrows = battlePlayers(hp,players,minPlayersPerSide,maxPlayersPerSide,60) # => 3 minutes
+    dictOfSpellWinrate, nbThrows = battlePlayers(hp,players,minPlayersPerSide,maxPlayersPerSide,60) # => 3 minutes
 
     # profiler.disable()
     # profiler.dump_stats("main_profile.prof")
 
-    #giveWinrateOfEveryPlayer(players,matchPlayed,wins)
-    giveWinrateOfEveryFace(dictOfSpellWinrate)
-    #analyseGameLength(nbThrows,minPlays,maxPlays)
+    #giveWinrateOfEveryFace(dictOfSpellWinrate)
+    analyseGameLength(nbThrows,minPlayersPerSide,maxPlayersPerSide)

@@ -19,7 +19,6 @@ class GameEngine:
     def set_show_prints(self, showPrints):
         self.showPrints = showPrints
         self.print = self._active_print if showPrints else self._inactive_print
-        self.print("\nPRINT ACTIVATED")
 
 ge = GameEngine()
 
@@ -35,8 +34,9 @@ class Game:
     def newTurn(self, gameStat= None):
         # import multiprocessing as mp
         # print(f"{mp.current_process().pid} new turn")
-        ge.print("\nNew Turn. HP left: ",end="")
+        ge.print("\n\nNew Turn. HP left: ",end="")
         ge.print("|".join([f"{entity.name}: {entity.getHP()}" for entity in self.entities]))
+        ge.print("",end="\n")
 
         for entity in self.entities:
             entity.playedThisTurn = False
@@ -46,10 +46,12 @@ class Game:
         while not stop and (self.winningTeam() is None):
             entityPlaying : Entity = self.entities[i]
             entityPlaying.resetEffects()
+
+            ge.print(f"{entityPlaying.name} :")
        
             # Handle bombs and poisons
             if entityPlaying.alive() and not entityPlaying.isGhoul():
-                results = entityPlaying.rollBombs() # RollBombs already self clear the attribute bombs.
+                results = entityPlaying.rollBombs(self) # RollBombs already self clear the attribute bombs.
                 for res in results:
                     if res == "left":
                         newVictim = self._findLeftEntityForBomb(entityPlaying)
@@ -57,7 +59,7 @@ class Game:
                     elif res == "right":
                         newVictim = self._findRightEntityForBomb(entityPlaying)
                         newVictim.bombs += 1
-                entityPlaying.rollPoisons()
+                entityPlaying.rollPoisons(self)
 
             # Play
             while entityPlaying.canPlay(self): # Check if we are stunned and if we did not die from poison/bomb
@@ -65,24 +67,13 @@ class Game:
                 if gameStat is not None:
                     gameStat.nbThrows += 1
                 target = rolledFace.defaultTarget(self)
-                if target is not None:
-                    ge.print(f"{entityPlaying.name} uses {rolledFace.faceName} on {target.name}, ",end="")
-                else:
-                    ge.print(f"{entityPlaying.name} uses {rolledFace.faceName}, ",end="")
-                rolledFace.apply(self, rolledFace.defaultTarget(self))
-                self.clearDeadGhouls()
+                ge.print(rolledFace.comment(self, target))
+                rolledFace.apply(self, target)
+            ge.print("","\n")
 
             i += 1
             if i>=len(self.entities):
                 stop = True
-
-    def clearDeadGhouls(self):
-        toClear = []
-        for entity in self.entities:
-            if entity.isGhoul() and (not entity.alive() or not entity.parent.alive()): # Remove ghoul if lich is dead
-                toClear.append(entity)
-        for cl in toClear:
-            self.entities.remove(cl)
 
     def clearGhouls(self):
         toClear = []
@@ -179,16 +170,34 @@ class Entity:
         self.initialHp = hp
         self.name = name
         self.activeArmor = 0
-        self.immune = False
         self.concentration = 1
         self.barbarism = 0
-        self.stunning = None
         self.playedThisTurn = False
         self.team = team
         self.taunting = False
         self.facesBackup = []
         self.bombs = 0
         self.poisons = 0
+        self.thorns = 0
+
+        self.immuning = None # Who this entity is immuning
+        self.stunning = None # Who this entity is stunning
+
+    def dies(self, game : Game):
+        self.resetEffects()
+        self._hp = 0
+        ge.print(f"{self.name} dies")
+        for entity in game.entities:
+            if entity.parent == self:
+                entity.dies(game)
+
+        # a ghoul remove itself from the game
+        if self.isGhoul():
+            game.entities.remove(self)
+
+        # remove bombs and poisons
+        self.poisons = 0
+        self.bombs = 0     
 
     def buffed(self, base):
         assert self.barbarism == 0 or self.concentration == 1, "Can't mix concentration and barbarism"
@@ -210,11 +219,12 @@ class Entity:
     def resetEffects(self):
         """Called before rerolling the dice. DO NOT CALL WHEN REROLLING AFTER CONCENTRATION"""
         self.activeArmor = 0
-        self.immune = False
         self.concentration = 1
         self.barbarism = 0
+        self.immuning = None
         self.stunning = None
         self.taunting = False
+        self.thorns = 0
 
     def canPlay(self, game : Game):
         for entity in game.entities:
@@ -222,10 +232,10 @@ class Entity:
                 return False
         return not self.playedThisTurn and self.alive()
 
-    def handleAttack(self, dmg, magic):
+    def handleAttack(self, dmg, magic, game):
         """Take armor into account. Returns hp lost"""
         hpLost = 0
-        if not self.immune:
+        if self.isImmunedBy(game) == None: # Nobody is immuning me, so sad
             if magic:
                 hpLost = dmg
             else:
@@ -237,6 +247,9 @@ class Entity:
         else:
             ge.print(f"{self.name} is immune")
         self._hp = max(self._hp, 0)
+
+        if self._hp == 0:
+            self.dies(game)
 
         return hpLost
 
@@ -255,7 +268,14 @@ class Entity:
                     return entity
         return None
     
-    def rollPoisons(self):
+    def isImmunedBy(self, game : Game):
+        """Returns None or the player immuning"""
+        for entity in game.entities:
+            if entity.alive() and entity.immuning == self:
+                return entity
+        return None
+    
+    def rollPoisons(self, game):
         """ handle damage and curing """
         if self.poisons > 0:
             poisonsThisTurn = self.poisons
@@ -268,9 +288,9 @@ class Entity:
                 else:
                     # Get damages
                     ge.print(f"{self.name} is poisoned")
-                    self.handleAttack(R.poisonDamage,R.poisonIsMagic)
+                    self.handleAttack(R.poisonDamage,R.poisonIsMagic, game)
 
-    def rollBombs(self):
+    def rollBombs(self, game):
         """ handle damages and return left, right or exploded depending on face rolled """
         results = []
         if self.bombs > 0:
@@ -279,7 +299,7 @@ class Entity:
                 if facesRolled < R.bombExplosionFaces:
                     # We exploded
                     ge.print(f"{self.name} exploded")
-                    self.handleAttack(R.bombDamage,R.bombIsMagic)
+                    self.handleAttack(R.bombDamage,R.bombIsMagic, game)
                     results.append("explosion")
                 elif facesRolled < R.bombExplosionFaces + R.bombLeftFaces:
                     # Pass bomb left
@@ -322,6 +342,11 @@ class Face(ABC):
     @abstractmethod
     def apply(self, game, target : Entity):
         """ Apply must set playedThisTurn to True unless it is concentration"""
+        pass
+
+    @abstractmethod
+    def comment(self, game, target : Entity):
+        """Returns a string commenting what is happening"""
         pass
 
     def _selectWeakestOpp(self, game : Game):

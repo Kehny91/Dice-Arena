@@ -1,13 +1,16 @@
 from core import Face,Entity,Game,getNIndexesRandomly,ge
 from typing import override
 from rules import Rules as R
+from rules import Deck
 
 class Fail(Face):
     def __init__(self, owner : Entity):
         super().__init__("FAIL", owner, 0, True)
 
+    def comment(self, game, target : Entity):
+        return  "fails"
+
     def apply(self, game, target : Entity):
-        ge.print("nothing happens")
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -23,12 +26,18 @@ class Attack(Face):
         super().__init__("Attack"+str(dmg), owner, tier, True)
         self.dmg = dmg
 
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "no one to attack"
+        else:
+            return f"attacks({self.dmg}) " + target.name + ":"
+
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
-        if target is None:
-            ge.print("No one to attack")
-        else:
-            target.handleAttack(self.owner.buffed(self.dmg),False)
+        if target is not None:
+            target.handleAttack(self.owner.buffed(self.dmg),False, game)
+            if target.thorns > 0:
+                self.owner.handleAttack(target.thorns, False, game)
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -45,7 +54,9 @@ class GhoulAttack(Attack):
         if target is None:
             ge.print("No one to attack")
         else:
-            target.handleAttack(self.owner.buffed(self.dmg),False)
+            target.handleAttack(self.owner.buffed(self.dmg),False, game)
+            if target.thorns > 0:
+                self.owner.handleAttack(target.thorns, False, game)
         self.owner.playedThisTurn = False # That is the difference with normal attack !
 
 
@@ -53,6 +64,12 @@ class Heal(Face):
     def __init__(self, owner : Entity, heal, tier):
         super().__init__("Heal"+str(heal), owner, tier, True)
         self.heal = heal
+
+    def comment(self, game, target : Entity):
+        if target == self:
+            return f"heals({self.heal}) itself:"
+        else:
+            return f"heals({self.heal}) " + target.name + ":"
 
     def apply(self, game, target : Entity):
         """target must be the one to heal"""
@@ -68,13 +85,16 @@ class Armor(Face):
         super().__init__("Armor"+str(armor), owner, tier, True)
         self.armor = armor
 
+    def comment(self, game, target : Entity):
+        return f"armors({self.armor}):"
+
     def apply(self, game, target: Entity):
         """target must be the one to armor"""
         # Target can't be None as the caster is alive
         target.activeArmor = self.owner.buffed(self.armor)
         self.owner.playedThisTurn = True
         
-        ge.print(f"{target.name} gains {self.owner.buffed(self.armor)} armor")
+        ge.print(f"{self.owner.buffed(self.armor)} armor gained")
 
     def defaultTarget(self, game):
         return self._selectSelf(game)
@@ -83,13 +103,17 @@ class Concentration(Face):
     def __init__(self, owner : Entity, tier):
         super().__init__("Concentration", owner, tier, True)
 
+    def comment(self, game, target : Entity):
+        return f"concentrates"
+
     def apply(self, game, target: Entity):
         """target is ignored"""
         if self.owner.barbarism == 0: # Can't concentrate after barbarism
             self.owner.concentration *= 2
-            ge.print(f"{self.owner.name} concentrates")
             assert target is None, "WEIRD"
             # Do not set self.owner.playedThisTurn to True
+        else:
+            self.owner.playedThisTurn = True
             
     def defaultTarget(self, game):
         return self._selectNone(game)
@@ -97,16 +121,18 @@ class Concentration(Face):
 class Stun(Face):
     def __init__(self, owner : Entity, tier):
         super().__init__("Stun", owner, tier, True)
+
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "no one to stun"
+        else:
+            return f"stuns " + target.name
     
     def apply(self, game, target: Entity):
         """Target is stunned"""
-        if target is None:
-            ge.print("No one to stun")
-        else:
+        if target is not None:
             self.owner.stunning = target
-            ge.print(f"{target.name} is stunned")
         self.owner.playedThisTurn = True
-        
 
     def defaultTarget(self, game):
         return self._selectWeakestOpp(game)
@@ -116,11 +142,16 @@ class Sweep(Face):
         super().__init__("Sweep"+str(dmg), owner, tier, True)
         self.dmg = dmg
 
+    def comment(self, game, target : Entity):
+        return f"sweeps({self.dmg}):"
+
     def apply(self, game, target: Entity):
         """Target is ignored"""
         for entity in game.entities:
             if entity.team != self.owner.team and entity.alive():
-                entity.handleAttack(self.owner.buffed(self.dmg),False)
+                entity.handleAttack(self.owner.buffed(self.dmg),False, game)
+                if entity.thorns > 0:
+                    self.owner.handleAttack(entity.thorns, False, game)
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -131,12 +162,16 @@ class Fireball(Face):
         super().__init__("Fireball"+str(dmg), owner, tier, True)
         self.dmg = dmg
 
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "no one to fireball"
+        else:
+            return f"fireballs({self.dmg}) " + target.name + ":"
+
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
-        if target is None:
-            ge.print("No one to fireball")
-        else:
-            target.handleAttack(self.owner.buffed(self.dmg),True)
+        if target is not None:
+            target.handleAttack(self.owner.buffed(self.dmg),True, game)
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -146,15 +181,18 @@ class Poison(Face):
     def __init__(self, owner : Entity, tier):
         super().__init__("Poison", owner, tier, True)
 
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "No one to poison"
+        else:
+            return f"poisons " + target.name
+
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
         for _ in range(self.owner.buffed(1)):
-            if target is None:
-                ge.print("No one to poison")
-            else:
+            if target is not None:
                 if game.canSpawnPoison():
                     target.poisons += 1
-                    ge.print(f"{target.name} gets poisoned")
                 else:
                     ge.print("Can't spawn more poison")
         self.owner.playedThisTurn = True
@@ -166,15 +204,18 @@ class Bomb(Face):
     def __init__(self, owner : Entity, tier):
         super().__init__("Bomb", owner, tier, True)
 
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "No one to bomb"
+        else:
+            return f"bombs " + target.name
+
     def apply(self, game, target : Entity):
         """target must be the one to attack"""
         for _ in range(self.owner.buffed(1)):
-            if target is None:
-                ge.print("No one to bomb")
-            else:
+            if target is not None:
                 if game.canSpawnBomb():
                     target.bombs += 1
-                    ge.print(f"{target.name} has earned a bomb")
                 else:
                     ge.print("Can't spawn more bombs")
         self.owner.playedThisTurn = True
@@ -183,9 +224,12 @@ class Bomb(Face):
         return self._selectWeakestOpp(game)
 
 class Upgrade(Face):
-    def __init__(self, owner : Entity, tier1Stack, tier2Stack, tier3Stack):
+    def __init__(self, owner : Entity):
         super().__init__("Upgrade", owner, 4, False)
-        self.tierStack = [tier1Stack,tier2Stack,tier3Stack]
+        self.tierStack = [Deck.getFacesWithMult(1),Deck.getFacesWithMult(2),Deck.getFacesWithMult(3)]
+
+    def comment(self, game, target : Entity):
+        return f"upgrades"
 
     def apply(self, game, target: Entity):
         """Target is ignored. always upgrade the weakest face"""
@@ -212,13 +256,18 @@ class Upgrade(Face):
 class Tank(Face):
     def __init__(self, owner : Entity):
         super().__init__("Tank", owner, 4, False)
-        self.armor = 4
+        self.armor = R.tankArmor
+
+    def comment(self, game, target : Entity):
+        return f"use Tanks:"
 
     def apply(self, game, target: Entity):
         """Target is ignored"""
         self.owner.taunting = True
         self.owner.activeArmor = self.owner.buffed(self.armor)
-        ge.print(f"{target.name} gains {self.owner.buffed(self.armor)} armor")
+        self.owner.thorns = self.owner.buffed(R.tankThorns)
+        ge.print(f"{self.owner.buffed(R.tankThorns)} thorns gained")
+        ge.print(f"{self.owner.buffed(self.armor)} armor gained")
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -228,12 +277,16 @@ class Vampire(Face):
     def __init__(self, owner):
         super().__init__("Vampire", owner, 4, False)
 
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "No one to Vampireise"
+        else:
+            return f"vampires " + target.name + ":"
+
     def apply(self, game, target):
         hpLost = 0
-        if target is None:
-            ge.print("No one to Vampireise")
-        else:
-            hpLost = target.handleAttack(self.owner.buffed(2),True)
+        if target is not None:
+            hpLost = target.handleAttack(self.owner.buffed(2),True, game)
             if R.vampireStealInitialHealth:
                 target.initialHp -= hpLost
         if R.vampireStealInitialHealth:
@@ -251,14 +304,18 @@ class King(Face):
         self.heal = 1
         self.armor = 1
 
-    def apply(self, game, target):
+    def comment(self, game, target : Entity):
         if target is None:
-            ge.print("No one to attack")
+            return "no one to attack. Only doing heal and armor"
         else:
-            target.handleAttack(self.owner.buffed(self.dmg),False)
+            return f"kings " + target.name + ":"
+
+    def apply(self, game, target):
+        if target is not None:
+            target.handleAttack(self.owner.buffed(self.dmg),False, game)
         self.owner.handleHeal(self.owner.buffed(self.heal))
         self.owner.activeArmor = self.owner.buffed(self.armor)
-        ge.print(f"{self.owner.name} gains {self.owner.buffed(self.armor)} armor")
+        ge.print(f"{self.owner.buffed(self.armor)} armor gained")
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
@@ -268,17 +325,29 @@ class King(Face):
 class Paladin(Face):
     def __init__(self, owner):
         super().__init__("Paladin", owner, 4, False)
+        self.heal = R.paladinHeal
+
+    def comment(self, game, target : Entity):
+        if target == self:
+            return f"paladins itself:"
+        else:
+            return f"paladins " + target.name + ":"
 
     def apply(self, game, target):
-        self.owner.immune = True
+        target.handleHeal(self.heal)
+        self.owner.immuning = target
+        ge.print(f"{target.name} is immuned")
         self.owner.playedThisTurn = True
 
     def defaultTarget(self, game):
-        return self._selectSelf(game)
+        return self._selectWeakestFriend(game)
 
 class Lich(Face):
     def __init__(self, owner):
         super().__init__("Lich", owner, 4, False)
+
+    def comment(self, game, target : Entity):
+        return f"uses Lich"
 
     def apply(self, game : Game, target):
         """target is ignored"""
@@ -286,7 +355,6 @@ class Lich(Face):
         for k in range(nbOfGhoulsToSpawn):
             if game.canSpawnGhoul():
                 ghoul = createGhoul(self.owner)
-                ge.print("ghoul spawned")
                 game.entities.append(ghoul)
             else:
                 ge.print("too many ghouls")
@@ -299,12 +367,16 @@ class Barbarian(Face):
     def __init__(self, owner : Entity):
         super().__init__("Barbarian", owner, 4, False)
 
+    def comment(self, game, target : Entity):
+        return f"uses Barbarian:"
+
     def apply(self, game, target: Entity):
         """target is ignored"""
         if self.owner.concentration == 1 and self.owner.getHP() > 1: # Does nothing if the barbarian was concentrating or is too weak
-            self.owner.barbarism += 1
-            self.owner.handleAttack(0,True)
-            ge.print(f"{self.owner.name} is buffed")
+            self.owner.barbarism += R.barbarianBuff
+            self.owner.handleAttack(R.barbarianDMG, True, game)
+        else:
+            self.owner.playedThisTurn = True
         assert target is None, "WEIRD"
         # Do not set self.owner.playedThisTurn to True
             
@@ -359,5 +431,7 @@ def addSpellByString(player, string, tier):
         player.faces.append(Barbarian(player))
     elif string[0:3] == "Fai":
         player.faces.append(Fail(player))
+    elif string[0:3] ==  "Upg":
+        player.faces.append(Upgrade(player))
     else:
         assert False, f"could not create spell {string} of tier {tier}"
