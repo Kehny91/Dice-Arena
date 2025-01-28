@@ -5,12 +5,14 @@ class Rules:
     poisonDamage = 1
     poisonIsMagic = True
     bombExplosionFaces = 2
-    bombLeftFaces = 2
-    bombRightFaces = 2
+    bombLeftFaces = 1
+    bombRightFaces = 1
+    bombDelayFaces = 2
     bombDamage = 6
     bombIsMagic = False
     canOverHeal = False
     vampireStealInitialHealth = True
+    vampireAttack = 2
     ghoulsAreEnraged = True
     canGhoulAttackImmediatly = True
     maxGhoulCount = 4
@@ -21,6 +23,11 @@ class Rules:
     tankArmor = 4
     barbarianDMG = 1
     barbarianBuff = 2
+    ghoulAttack1Faces = 1
+    ghoulAttack2Faces = 1
+    kingDmg = 2
+    kingHeal = 1
+    kingArmor = 1
 
 
 class Deck:

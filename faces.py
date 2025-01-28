@@ -5,7 +5,7 @@ from rules import Deck
 
 class Fail(Face):
     def __init__(self, owner : Entity):
-        super().__init__("FAIL", owner, 0, True)
+        super().__init__("FAIL", owner, 0, True, Face.ThrowType.LIGHT)
 
     def comment(self, game, target : Entity):
         return  "fails"
@@ -82,7 +82,7 @@ class Heal(Face):
 
 class Armor(Face):
     def __init__(self, owner : Entity, armor, tier):
-        super().__init__("Armor"+str(armor), owner, tier, True)
+        super().__init__("Armor"+str(armor), owner, tier, True, Face.ThrowType.LIGHT)
         self.armor = armor
 
     def comment(self, game, target : Entity):
@@ -101,7 +101,7 @@ class Armor(Face):
 
 class Concentration(Face):
     def __init__(self, owner : Entity, tier):
-        super().__init__("Concentration", owner, tier, True)
+        super().__init__("Concentration", owner, tier, True, Face.ThrowType.LIGHT)
 
     def comment(self, game, target : Entity):
         return f"concentrates"
@@ -225,7 +225,7 @@ class Bomb(Face):
 
 class Upgrade(Face):
     def __init__(self, owner : Entity):
-        super().__init__("Upgrade", owner, 4, False)
+        super().__init__("Upgrade", owner, 4, False, Face.ThrowType.HEAVY)
         self.tierStack = [Deck.getFacesWithMult(1),Deck.getFacesWithMult(2),Deck.getFacesWithMult(3)]
 
     def comment(self, game, target : Entity):
@@ -255,7 +255,7 @@ class Upgrade(Face):
 
 class Tank(Face):
     def __init__(self, owner : Entity):
-        super().__init__("Tank", owner, 4, False)
+        super().__init__("Tank", owner, 4, False, Face.ThrowType.LIGHT)
         self.armor = R.tankArmor
 
     def comment(self, game, target : Entity):
@@ -286,7 +286,7 @@ class Vampire(Face):
     def apply(self, game, target):
         hpLost = 0
         if target is not None:
-            hpLost = target.handleAttack(self.owner.buffed(2),True, game)
+            hpLost = target.handleAttack(self.owner.buffed(R.vampireAttack),True, game)
             if R.vampireStealInitialHealth:
                 target.initialHp -= hpLost
         if R.vampireStealInitialHealth:
@@ -300,9 +300,9 @@ class Vampire(Face):
 class King(Face):
     def __init__(self, owner):
         super().__init__("King", owner, 4, False)
-        self.dmg = 2
-        self.heal = 1
-        self.armor = 1
+        self.dmg = R.kingDmg
+        self.heal = R.kingHeal
+        self.armor = R.kingArmor
 
     def comment(self, game, target : Entity):
         if target is None:
@@ -365,7 +365,7 @@ class Lich(Face):
     
 class Barbarian(Face):
     def __init__(self, owner : Entity):
-        super().__init__("Barbarian", owner, 4, False)
+        super().__init__("Barbarian", owner, 4, False, Face.ThrowType.LIGHT)
 
     def comment(self, game, target : Entity):
         return f"uses Barbarian:"
@@ -386,16 +386,19 @@ class Barbarian(Face):
 def createGhoul(father : Entity):
     ghoulHp = 1
     p = Entity(ghoulHp, "Ghoul", father.team, father)
-    p.faces.append(Fail(p))
-    p.faces.append(Fail(p))
-    p.faces.append(Fail(p))
-    p.faces.append(Fail(p))
-    if R.ghoulsAreEnraged:
-        p.faces.append(GhoulAttack(p,2,1))
-        p.faces.append(GhoulAttack(p,1,1))
-    else:
-        p.faces.append(Attack(p,2,1))
-        p.faces.append(Attack(p,1,1))
+    for _ in range(6-R.ghoulAttack1Faces-R.ghoulAttack2Faces):
+        p.faces.append(Fail(p))
+
+    for _ in range(R.ghoulAttack1Faces):
+        if R.ghoulsAreEnraged:
+            p.faces.append(GhoulAttack(p,1,1))
+        else:
+            p.faces.append(Attack(p,1,1))
+    for _ in range(R.ghoulAttack2Faces):
+        if R.ghoulsAreEnraged:
+            p.faces.append(GhoulAttack(p,2,1))
+        else:
+            p.faces.append(Attack(p,2,1))
     if not R.canGhoulAttackImmediatly:
         p.playedThisTurn = True # Ghoul cannot play immediatly
     return p

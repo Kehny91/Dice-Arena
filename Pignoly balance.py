@@ -1,9 +1,7 @@
-from core import Entity,Game,GameStat,getNIndexesRandomly,ge
+from core import Entity,Game,getNIndexesRandomly,ge
 from faces import addSpellByString
 import faces
 from random import randint
-import numpy as np
-import itertools
 import multiprocessing as mp
 import cProfile
 import os
@@ -56,6 +54,7 @@ def createNrandomPlayers(hp, N,repartition):
     return players
 
 def preparePlayerForBattle(player : Entity, hp, team):
+    """ This should be called to allow a player to play another game """
     player.resetEffects()
     player.restoreHP(hp)
     player.team=team
@@ -63,28 +62,9 @@ def preparePlayerForBattle(player : Entity, hp, team):
     player.bombs = 0
     player.poisons = 0
 
-def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_min):
-    nbPlayers = len(players)
-    dictOfSpellWinrate = {}
-    nbOfThrows = [] # A list per numberOfPlayerPer side containing a list of the number of throws per match
 
-    nbIters = nbPlayers*300
-    nbUnfinishable = 0
-    for nbPlayerPerSide in range(minNbPlayerPerSide,maxNbPlayerPerSide+1):
-        nbOfThrows.append([])
-        for i in range(nbIters):
-            if i%1000 ==0:
-                print(f"{i/nbIters*100:.2f}%")
-            playerIndexes = getNIndexesRandomly(players,2*nbPlayerPerSide,True)
-            throws = battleOnce(hp, players, playerIndexes, maxTime_min,dictOfSpellWinrate)
-            if throws>60*10/60: #TODO
-                nbUnfinishable +=1
-
-    print(nbUnfinishable, " unfinishables")
-    
-    return dictOfSpellWinrate,nbOfThrows
-
-def battleOnce(hp, players, playerIndexes, maxTime_min, dictOfSpellWinrate):
+def battleOnce(hp, players, playerIndexes, maxTime_min, dictOfSpellWinrate, matchTimes_s):
+    """ Make the indexed player fight a match. updates spell winrate and append the time taken for the match """
     nbPlayerPerSide = len(playerIndexes)//2
     teamA = [players[playerIndexes[k]] for k in range(nbPlayerPerSide)] # first ones makes team A
     teamB = [players[playerIndexes[k]] for k in range(nbPlayerPerSide,2*nbPlayerPerSide)] # second ones makes team B
@@ -100,27 +80,28 @@ def battleOnce(hp, players, playerIndexes, maxTime_min, dictOfSpellWinrate):
     for p in  teamB:
         preparePlayerForBattle(p, hp, 2)
 
-    gs = GameStat()
     if randint(0,100000) == -1: #une chance sur N que la partie soit affichée
         ge.set_show_prints(True)
 
     ge.print("\nNew match\n")
-    g.runUntilWinner(maxTime_min, gs)
+    g.runUntilWinner(maxTime_min)
     ge.print("")
     #ge.set_show_prints(False)
 
     updateDictOfSpellWinrate(g, dictOfSpellWinrate)
-    return gs.nbThrows
+    matchTimes_s.append((nbPlayerPerSide, g.getMatchTime_s()))
     
-def battlePlayersOnPredefinedMatchs(hp, players, playerIndexesArray, maxTime_min, dictOfSpellWinrate): # Does not support nb of throws stat
+def battlePlayersOnPredefinedMatchs(hp, players, playerIndexesArray, maxTime_min, dictOfSpellWinrate, matchTimes_s):
     # As a process have its own separate memory, players are copied. There is no risk of race conditions
+    # This function will be called multiple times by different threads, on different matches
     nbPlayers = len(players)
     localdictOfSpellWinrate = {}
+    localmatchTimes_s = []
     i = 0
     for playerIndexes in playerIndexesArray:
         if i%1000 == 0:
             print(f"{i}/{len(playerIndexesArray)}")
-        battleOnce(hp, players, playerIndexes, maxTime_min, localdictOfSpellWinrate)
+        battleOnce(hp, players, playerIndexes, maxTime_min, localdictOfSpellWinrate, localmatchTimes_s)
         i += 1
     
     for k in localdictOfSpellWinrate.keys():
@@ -129,14 +110,27 @@ def battlePlayersOnPredefinedMatchs(hp, players, playerIndexesArray, maxTime_min
             dictOfSpellWinrate.update({k: [0,0]})
         dictOfSpellWinrate[k][0] += localdictOfSpellWinrate[k][0]
         dictOfSpellWinrate[k][1] += localdictOfSpellWinrate[k][1]
+    
+    matchTimes_s += localmatchTimes_s
 
 
-def generate_matches(players, nbPlayerPerSide, nbMatches):
+def generate_matches(players, minNbPlayerPerSide, maxNbPlayerPerSide, nbMatchesPerNbOfPlayers):
     """Generate a list of matches, each match is a tuple of player indexes."""
-    matches = []
-    for _ in range(nbMatches):
-        playerIndexes = getNIndexesRandomly(players, 2 * nbPlayerPerSide, True)
-        matches.append(playerIndexes)
+    matchesByNbOfPlayers = []
+    # generate matches for all number of players per matches
+    for nbPlayerPerSide in range(minNbPlayerPerSide, maxNbPlayerPerSide+1):
+        matchesForThisNbOfPlayers = []
+        for _ in range(nbMatchesPerNbOfPlayers):
+            playerIndexes = getNIndexesRandomly(players, 2 * nbPlayerPerSide, True)
+            matchesForThisNbOfPlayers.append(playerIndexes)
+        matchesByNbOfPlayers.append(matchesForThisNbOfPlayers)
+    
+    # Flatten the array by interleaving elements
+    # interleaving the elements to avoid having all the longest matches stacked at the end, and the simplest at the front
+    nbCategories = maxNbPlayerPerSide-minNbPlayerPerSide+1
+    totalNbOfMatchs = nbMatchesPerNbOfPlayers*nbCategories
+    matches = [matchesByNbOfPlayers[i%nbCategories][i//nbCategories] for i in range(totalNbOfMatchs)]
+
     return matches
 
 def divide_matches(matches, n):
@@ -166,20 +160,6 @@ def profilingWorkerWrapper(args):
     profiler.disable()
     profiler.dump_stats(f"worker_profile_{os.getpid()}.prof")
 
-def interleave_elements(lst, category):
-    """
-    Mixes a list such that grouped elements like [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]
-    are interleaved into [1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3].
-    """
-    n = len(lst) // category  # Assuming the list can be divided into 3 equal groups
-    groups = [lst[i * n: (i + 1) * n] for i in range(category)]  # Split into 3 groups
-    
-    result = []
-    for i in range(n):
-        for group in groups:
-            result.append(group[i])
-    return result
-
 def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_min):
     """ Does not count nb of throws"""
 
@@ -187,21 +167,18 @@ def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, 
 
     manager = mp.Manager()
     dictOfSpellWinrate = manager.dict()
+    matchTimes_s = manager.list()
+
     for spell in Deck.allSpellsAndClass:
         dictOfSpellWinrate[spell] = manager.list([0,0])
 
     nbIters = nbPlayers*200
-    matches = []
-    for nbPlayerPerSide in range(minNbPlayerPerSide,maxNbPlayerPerSide+1):
-        matches += generate_matches(players, nbPlayerPerSide, nbIters)
-    
-    # interleaving the elements to avoid having all the longest matches stacked at the end, and the simplest at the front
-    matches = interleave_elements(matches, maxNbPlayerPerSide-minNbPlayerPerSide +1)
+    matches = generate_matches(players, minNbPlayerPerSide, maxNbPlayerPerSide, nbIters)
 
-    proc = 6
+    proc = 7
 
     matchBatches = divide_matches(matches, proc)
-    args = [ (hp, players, matchBatches[i], maxTime_min, dictOfSpellWinrate) for i in range(proc) ]
+    args = [ (hp, players, matchBatches[i], maxTime_min, dictOfSpellWinrate, matchTimes_s) for i in range(proc) ]
 
     with mp.Pool(proc) as pool:
         pool.map(workerWrapper, args)
@@ -210,7 +187,7 @@ def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, 
     for spell in Deck.allSpellsAndClass:
         dictOfSpellWinrate[spell] = list(dictOfSpellWinrate[spell])
     
-    return dict(dictOfSpellWinrate),[[]]
+    return dict(dictOfSpellWinrate), list(matchTimes_s)
 
 def updateDictOfSpellWinrate(game : Game, dictOfSpellWinrate): 
     # This function must be called after each game, before restoring to initial faces.
@@ -256,15 +233,15 @@ def giveWinrateOfEveryFace(dictOfSpellWinrate):
             
 
 import matplotlib.pyplot as plt
-def analyseGameLength(nbOfThrows, minPlayer, maxPlayer):
+def analyseGameLength(matchTimes_s, minPlayer, maxPlayer):
     for k in range(minPlayer,maxPlayer+1):
         secondsPerThrow = 10
-        time = [throws*secondsPerThrow/60 for throws in nbOfThrows[k-minPlayer]]
-        plt.hist(time, bins=120, edgecolor='black', rwidth=0.8)
+        times = [nbP_time[1]/60 for nbP_time in matchTimes_s if nbP_time[0] == k]
+        plt.hist(times, bins=120, edgecolor='black', rwidth=0.8)
 
         # Ajout des labels
-        plt.xlabel('Valeurs')
-        plt.ylabel('Fréquence')
+        plt.xlabel('Temps (min)')
+        plt.ylabel('Fréquence (nb parties)')
         plt.title(f'Temps de jeu a {k} joueurs par équipe')
 
         # Affichage
@@ -307,17 +284,16 @@ if __name__ == "__main__":
     Nmax = Deck.nbOfDifferentDices1123CF
     hp = 20
 
-    minPlayersPerSide = 3
+    minPlayersPerSide = 4
     maxPlayersPerSide = 4
 
     players = createNrandomPlayers(hp,Nmax,"F112CU")
     
-    #dictOfSpellWinrate, nbThrows = battlePlayersMultiproc(hp,players,minPlayersPerSide,maxPlayersPerSide,60) 
+    dictOfSpellWinrate, matchTimes_s = battlePlayersMultiproc(hp,players,minPlayersPerSide,maxPlayersPerSide,60) 
     #ge.set_show_prints(True)
-    dictOfSpellWinrate, nbThrows = battlePlayers(hp,players,minPlayersPerSide,maxPlayersPerSide,60) # => 3 minutes
 
     # profiler.disable()
     # profiler.dump_stats("main_profile.prof")
 
-    #giveWinrateOfEveryFace(dictOfSpellWinrate)
-    analyseGameLength(nbThrows,minPlayersPerSide,maxPlayersPerSide)
+    giveWinrateOfEveryFace(dictOfSpellWinrate)
+    analyseGameLength(matchTimes_s,minPlayersPerSide,maxPlayersPerSide)

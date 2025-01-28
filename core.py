@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from random import randint, sample
 import numpy as np
 from rules import Rules as R
+from enum import Enum
 
 class GameEngine:
     def __init__(self):
@@ -22,16 +23,28 @@ class GameEngine:
 
 ge = GameEngine()
 
-class GameStat:
-    def __init__(self):
-        self.nbThrows = 0
-
 class Game:
+
+    timePerLightThrow_s = 5 # armor, tank
+    timePerNormalThrow_s = 10 # all else
+    timePerHeavyThrow_s = 15 # upgrade
 
     def __init__(self):
         self.entities = []
+        self._timeEstimate_s = 0
 
-    def newTurn(self, gameStat= None):
+    def countThrow(self, throwType, number=1):
+        if throwType == Face.ThrowType.LIGHT:
+            self._timeEstimate_s += number*Game.timePerLightThrow_s
+        elif throwType == Face.ThrowType.NORMAL:
+            self._timeEstimate_s += number*Game.timePerNormalThrow_s
+        else:
+            self._timeEstimate_s += number*Game.timePerHeavyThrow_s
+
+    def getMatchTime_s(self):
+        return self._timeEstimate_s
+
+    def newTurn(self):
         # import multiprocessing as mp
         # print(f"{mp.current_process().pid} new turn")
         ge.print("\n\nNew Turn. HP left: ",end="")
@@ -51,7 +64,7 @@ class Game:
        
             # Handle bombs and poisons
             if entityPlaying.alive() and not entityPlaying.isGhoul():
-                results = entityPlaying.rollBombs(self) # RollBombs already self clear the attribute bombs.
+                results = entityPlaying.rollBombs(self)
                 for res in results:
                     if res == "left":
                         newVictim = self._findLeftEntityForBomb(entityPlaying)
@@ -64,8 +77,7 @@ class Game:
             # Play
             while entityPlaying.canPlay(self): # Check if we are stunned and if we did not die from poison/bomb
                 rolledFace = entityPlaying.faces[randint(0,len(entityPlaying.faces)-1)]
-                if gameStat is not None:
-                    gameStat.nbThrows += 1
+                self.countThrow(rolledFace.throwType)
                 target = rolledFace.defaultTarget(self)
                 ge.print(rolledFace.comment(self, target))
                 rolledFace.apply(self, target)
@@ -118,9 +130,7 @@ class Game:
 
         return winner  # Retourner l'équipe gagnante ou None s'il n'y en a pas
         
-    def runUntilWinner(self, maxTime_min, gameStat = None):
-        if gameStat is None:
-            gameStat = GameStat()
+    def runUntilWinner(self, maxTime_min):
         while self.winningTeam() is None:
 
             nbPlayersAlive = 0
@@ -130,10 +140,8 @@ class Game:
             if nbPlayersAlive == 0:
                 ge.set_show_prints(False)
 
-            self.newTurn(gameStat)
-            timePerThrow_min = 10/60
-            actualTime_min = gameStat.nbThrows*timePerThrow_min
-            if actualTime_min > maxTime_min:
+            self.newTurn()
+            if self._timeEstimate_s/60 > maxTime_min:
                 print("")
                 for p in self.entities:
                     p.debug()
@@ -275,12 +283,13 @@ class Entity:
                 return entity
         return None
     
-    def rollPoisons(self, game):
+    def rollPoisons(self, game : Game):
         """ handle damage and curing """
         if self.poisons > 0:
             poisonsThisTurn = self.poisons
             for _ in range(poisonsThisTurn):
                 facesRolled = randint(0,5)
+                game.countThrow(Face.ThrowType.LIGHT)
                 if facesRolled < R.poisonCuredFaces:
                     # We are cured
                     self.poisons -= 1
@@ -290,26 +299,33 @@ class Entity:
                     ge.print(f"{self.name} is poisoned")
                     self.handleAttack(R.poisonDamage,R.poisonIsMagic, game)
 
-    def rollBombs(self, game):
-        """ handle damages and return left, right or exploded depending on face rolled """
+    def rollBombs(self, game : Game):
+        """ handle damages and return left, right, exploded or delayed depending on face rolled """
         results = []
         if self.bombs > 0:
             for _ in range(self.bombs):
                 facesRolled = randint(0,5)
+                game.countThrow(Face.ThrowType.LIGHT)
                 if facesRolled < R.bombExplosionFaces:
                     # We exploded
                     ge.print(f"{self.name} exploded")
                     self.handleAttack(R.bombDamage,R.bombIsMagic, game)
                     results.append("explosion")
+                    self.bombs -= 1
                 elif facesRolled < R.bombExplosionFaces + R.bombLeftFaces:
                     # Pass bomb left
                     ge.print(f"{self.name} passes bomb left")
                     results.append("left")
-                else:
+                    self.bombs -= 1
+                elif facesRolled < R.bombExplosionFaces + R.bombLeftFaces + R.bombRightFaces:
                     # Pass bomb right
                     ge.print(f"{self.name} passes bomb right")
                     results.append("right")
-            self.bombs = 0 # Bomb exploded or got passed
+                    self.bombs -= 1
+                else :
+                    # Bomb is delayed
+                    ge.print(f"{self.name} is delayed")
+                    results.append("delayed")
         return results
 
     def facesStr(self):
@@ -329,11 +345,17 @@ class Entity:
             self.faces.append(f)
 
 class Face(ABC):
-    def __init__(self, name, owner : Entity, tier, isRemovable):
+    class ThrowType(Enum):
+        LIGHT = 1
+        NORMAL = 2
+        HEAVY = 3
+
+    def __init__(self, name, owner : Entity, tier, isRemovable, throwType= ThrowType.NORMAL):
         self.faceName = name
         self.owner = owner
         self.tier = tier
         self.isRemovable = isRemovable
+        self.throwType = throwType
     
     @abstractmethod
     def defaultTarget(self, game):
