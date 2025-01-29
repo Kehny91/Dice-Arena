@@ -161,8 +161,6 @@ def profilingWorkerWrapper(args):
     profiler.dump_stats(f"worker_profile_{os.getpid()}.prof")
 
 def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_min):
-    """ Does not count nb of throws"""
-
     nbPlayers = len(players)
 
     manager = mp.Manager()
@@ -188,6 +186,23 @@ def battlePlayersMultiproc(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, 
         dictOfSpellWinrate[spell] = list(dictOfSpellWinrate[spell])
     
     return dict(dictOfSpellWinrate), list(matchTimes_s)
+
+def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_min):
+    nbPlayers = len(players)
+
+    dictOfSpellWinrate = {}
+    matchTimes_s = []
+
+    for spell in Deck.allSpellsAndClass:
+        dictOfSpellWinrate[spell] = [0,0]
+
+    nbIters = nbPlayers*200
+    matches = generate_matches(players, minNbPlayerPerSide, maxNbPlayerPerSide, nbIters)
+
+    for playerIndexes in matches:
+        battlePlayersOnPredefinedMatchs(hp, players, matches, maxTime_min, dictOfSpellWinrate, matchTimes_s)
+    
+    return dictOfSpellWinrate, matchTimes_s
 
 def updateDictOfSpellWinrate(game : Game, dictOfSpellWinrate): 
     # This function must be called after each game, before restoring to initial faces.
@@ -251,16 +266,16 @@ def analyseGameLength(matchTimes_s, minPlayer, maxPlayer):
 def testSpecificMatchup():
     ge.set_show_prints(True)
     hp = 20
-    dice1 = ["Tank", "Attack2", "Attack4", "Concentration","Poison","Bomb", "Sweep1"]
+    dice1 = ["Tank", "Attack2", "Attack4", "Concentration","Poison","Attack2", "Sweep1"]
     player1 = createPlayer(20, "p1", 1, dice1)
 
-    dice2 = ["Barbarian", "Attack2", "Attack4", "Concentration","Poison","Bomb", "Sweep1"]
+    dice2 = ["Thief", "Attack2", "Attack4", "Concentration","Poison","Bomb", "Sweep1"]
     player2 = createPlayer(20, "p2", 1, dice2)
 
     dice3 = ["Lich", "Attack2", "Attack4", "Armor2","Poison","Concentration", "Sweep1"]
     player3 = createPlayer(20, "p3", 2, dice3)
 
-    dice4 = ["Paladin", "Attack2", "Attack4", "Armor2","Concentration","Bomb", "Sweep1"]
+    dice4 = ["Judge", "Attack2", "Attack4", "Armor2","Concentration","Fireball3", "Sweep1"]
     player4 = createPlayer(20, "p4", 2, dice4)
     # Upgrade need a specific call (cannot init by string)
     
@@ -278,18 +293,20 @@ from functools import cmp_to_key
 if __name__ == "__main__":
     # profiler = cProfile.Profile()
     # profiler.enable()
-    #testSpecificMatchup()
+    # testSpecificMatchup()
     
     
     Nmax = Deck.nbOfDifferentDices1123CF
     hp = 20
 
-    minPlayersPerSide = 4
-    maxPlayersPerSide = 4
+    minPlayersPerSide = 1
+    maxPlayersPerSide = 2
 
     players = createNrandomPlayers(hp,Nmax,"F112CU")
+    #players = createNrandomPlayers(hp,Nmax,"C11223") # No upgrade.
     
     dictOfSpellWinrate, matchTimes_s = battlePlayersMultiproc(hp,players,minPlayersPerSide,maxPlayersPerSide,60) 
+    #dictOfSpellWinrate, matchTimes_s = battlePlayers(hp,players,minPlayersPerSide,maxPlayersPerSide,60) 
     #ge.set_show_prints(True)
 
     # profiler.disable()

@@ -60,7 +60,7 @@ class Game:
             entityPlaying : Entity = self.entities[i]
             entityPlaying.resetEffects()
 
-            ge.print(f"{entityPlaying.name} :")
+            ge.print(f"{entityPlaying.name} faces : {entityPlaying.facesStr()} :")
        
             # Handle bombs and poisons
             if entityPlaying.alive() and not entityPlaying.isGhoul():
@@ -234,6 +234,9 @@ class Entity:
         self.taunting = False
         self.thorns = 0
 
+    def getRandomFace(self):
+        return self.faces[randint(0,len(self.faces)-1)]
+
     def canPlay(self, game : Game):
         for entity in game.entities:
             if entity.stunning == self:
@@ -324,7 +327,7 @@ class Entity:
                     self.bombs -= 1
                 else :
                     # Bomb is delayed
-                    ge.print(f"{self.name} is delayed")
+                    ge.print(f"{self.name} delay the bomb")
                     results.append("delayed")
         return results
 
@@ -342,7 +345,10 @@ class Entity:
     def restoreFaces(self):
         self.faces = []
         for f in self.facesBackup:
+            # In case owner has been changed by the thief
+            f.owner = self
             self.faces.append(f)
+            
 
 class Face(ABC):
     class ThrowType(Enum):

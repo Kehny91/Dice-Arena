@@ -2,6 +2,7 @@ from core import Face,Entity,Game,getNIndexesRandomly,ge
 from typing import override
 from rules import Rules as R
 from rules import Deck
+from random import randint
 
 class Fail(Face):
     def __init__(self, owner : Entity):
@@ -375,12 +376,119 @@ class Barbarian(Face):
         if self.owner.concentration == 1 and self.owner.getHP() > 1: # Does nothing if the barbarian was concentrating or is too weak
             self.owner.barbarism += R.barbarianBuff
             self.owner.handleAttack(R.barbarianDMG, True, game)
+            # Do not set self.owner.playedThisTurn to True
         else:
             self.owner.playedThisTurn = True
         assert target is None, "WEIRD"
-        # Do not set self.owner.playedThisTurn to True
             
     def defaultTarget(self, game):
+        return self._selectNone(game)
+
+class Thief(Face):
+    def __init__(self, owner : Entity):
+        super().__init__("Thief", owner, 4, False, Face.ThrowType.HEAVY)
+
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "No one to steal"
+        else:
+            return f"thiefs " + target.name + ":"
+
+    def apply(self, game, target: Entity):
+        if target is not None:
+            oppfaceStolenIndex = randint(0,5)
+            oppFace : Face = target.faces[oppfaceStolenIndex]
+            if oppFace.isRemovable:
+                #Find my weakest face
+                weakestIndex = None
+                weakestTier = None
+                for k in range(len(self.owner.faces)):
+                    if self.owner.faces[k].isRemovable:
+                        if weakestIndex is None or weakestIndex > self.owner.faces[k].tier:
+                            weakestIndex = k
+                            weakestTier = self.owner.faces[k].tier
+
+                assert weakestTier is not None, "WEIRD"
+                if R.thiefCanRefuseTrade and weakestTier > oppFace.tier:
+                    ge.print(f"refuses swaping {self.owner.faces[weakestTier].faceName} for {oppFace.faceName}")
+                else:
+                    # Swap
+                    ge.print(f"swaps {self.owner.faces[weakestTier].faceName} for {oppFace.faceName}")
+                    # Change owners
+                    oppFace.owner = self.owner
+                    self.owner.faces[weakestIndex].owner = target
+                    # Swaps
+                    tmp = self.owner.faces[weakestIndex]
+                    self.owner.faces[weakestIndex] = oppFace
+                    target.faces[oppfaceStolenIndex] = tmp
+            else:
+                ge.print(f"can't steal {oppFace.faceName}")
+
+        self.owner.playedThisTurn = True
+            
+    def defaultTarget(self, game : Game):
+        """ targetting is very specific for thief"""
+        bestEsperance = None
+        bestTarget = None
+        for entity in game.entities:
+            esperance = 0
+            if not entity.isGhoul() and entity.team != self.owner.team and entity.alive():
+                for face in entity.faces:
+                    if face.isRemovable:
+                        esperance += face.tier*1/6
+                if bestTarget is None or esperance >  bestEsperance:
+                    bestTarget = entity
+                    bestEsperance = esperance
+        return bestTarget
+    
+class Judge(Face):
+    def __init__(self, owner : Entity):
+        super().__init__("Judge", owner, 4, False, Face.ThrowType.LIGHT)
+
+    def comment(self, game, target : Entity):
+        return "has choices between"
+
+    def apply(self, game, target: Entity):
+        face1 = self.owner.getRandomFace()
+        face2 = self.owner.getRandomFace()
+
+        ge.print(f"{face1.faceName} and {face2.faceName}")
+
+        faceToPlay = face1
+
+        averageTier = sum([f.tier for f in self.owner.faces])/len(self.owner.faces)
+        isCurrentDiceLowTier = averageTier < 3
+
+        if isinstance(face1, Concentration): # Concentration is very good -> no brainer
+            faceToPlay = face1
+        elif isinstance(face2, Concentration): # Concentration is very good -> no brainer
+            faceToPlay = face2
+        elif isinstance(face1, Upgrade):
+            if isCurrentDiceLowTier: # If dice is weak, go for upgrade
+                faceToPlay = face1
+            else: # Else, the other will be better
+                faceToPlay = face2
+        elif isinstance(face2, Upgrade):
+            if isCurrentDiceLowTier: # If dice is weak, go for upgrade
+                faceToPlay = face2
+            else:
+                faceToPlay = face1 # Else, the other will be better
+        else: # Go for higher tier
+            if face1.tier >= face2.tier:
+                faceToPlay = face1
+            else:
+                faceToPlay = face2
+
+        # Actually play the face
+        game.countThrow(faceToPlay.throwType)
+        target = faceToPlay.defaultTarget(game)
+        ge.print(faceToPlay.comment(game, target))
+        faceToPlay.apply(game, target)
+
+        #Do not set self.owner.playedThisTurn = True as the invoked faces will 
+
+
+    def defaultTarget(self, game : Game):
         return self._selectNone(game)
 
 def createGhoul(father : Entity):
@@ -432,6 +540,10 @@ def addSpellByString(player, string, tier):
         player.faces.append(Lich(player))
     elif string[0:3] == "Bar":
         player.faces.append(Barbarian(player))
+    elif string[0:3] == "Thi":
+        player.faces.append(Thief(player))
+    elif string[0:3] == "Jud":
+        player.faces.append(Judge(player))
     elif string[0:3] == "Fai":
         player.faces.append(Fail(player))
     elif string[0:3] ==  "Upg":
