@@ -270,13 +270,13 @@ def testSpecificMatchup():
     player1 = createPlayer(20, "p1", 1, dice1)
 
     dice2 = ["Thief", "Attack2", "Attack4", "Concentration","Poison","Bomb", "Sweep1"]
-    player2 = createPlayer(20, "p2", 1, dice2)
+    player2 = createPlayer(20, "p2", 2, dice2)
 
     dice3 = ["Lich", "Attack2", "Attack4", "Armor2","Poison","Concentration", "Sweep1"]
-    player3 = createPlayer(20, "p3", 2, dice3)
+    player3 = createPlayer(20, "p3", 3, dice3)
 
     dice4 = ["Judge", "Attack2", "Attack4", "Armor2","Concentration","Fireball3", "Sweep1"]
-    player4 = createPlayer(20, "p4", 2, dice4)
+    player4 = createPlayer(20, "p4", 4, dice4)
     # Upgrade need a specific call (cannot init by string)
     
     
