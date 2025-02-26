@@ -149,6 +149,7 @@ def divide_matches(matches, n):
 
 def workerWrapper(args):
     battlePlayersOnPredefinedMatchs(*args)
+    print("Worker finished")
 
 def profilingWorkerWrapper(args):
     """Wrapper to profile the worker."""
@@ -299,10 +300,10 @@ if __name__ == "__main__":
     Nmax = Deck.nbOfDifferentDices1123CF
     hp = 20
 
-    minPlayersPerSide = 1
-    maxPlayersPerSide = 2
+    minPlayersPerSide = 2
+    maxPlayersPerSide = 4
 
-    players = createNrandomPlayers(hp,Nmax,"F112CU")
+    players = createNrandomPlayers(hp,Nmax//2,"F112CU")
     #players = createNrandomPlayers(hp,Nmax,"C11223") # No upgrade.
     
     dictOfSpellWinrate, matchTimes_s = battlePlayersMultiproc(hp,players,minPlayersPerSide,maxPlayersPerSide,60) 
@@ -312,5 +313,6 @@ if __name__ == "__main__":
     # profiler.disable()
     # profiler.dump_stats("main_profile.prof")
 
+    print("Finished battles")
     giveWinrateOfEveryFace(dictOfSpellWinrate)
     analyseGameLength(matchTimes_s,minPlayersPerSide,maxPlayersPerSide)

@@ -20,11 +20,11 @@ class Rules:
     maxBombCount = 4
     paladinHeal = 2
     tankThorns = 2
-    tankArmor = 4
+    tankArmor = 3 # Patch 26/02/2025 4 -> 3
     barbarianDMG = 1
     barbarianBuff = 2
-    ghoulAttack1Faces = 1
-    ghoulAttack2Faces = 1
+    ghoulAttack1Faces = 0 # Patch 26/02/2025 1 -> 0 
+    ghoulAttack2Faces = 2  # Patch 26/02/2025 1 -> 2 
     kingDmg = 2
     kingHeal = 1
     kingArmor = 1
