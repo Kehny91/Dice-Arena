@@ -29,6 +29,10 @@ class Rules:
     kingHeal = 1
     kingArmor = 1
     thiefCanRefuseTrade = True
+    # === Extension ===
+    demonicAxeDmg = 10
+    hpWhenRevived = 5
+    hpWhenMummyfied = 10
 
 
 class Deck:

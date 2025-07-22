@@ -226,7 +226,7 @@ class Bomb(Face):
 
 class Upgrade(Face):
     def __init__(self, owner : Entity):
-        super().__init__("Upgrade", owner, 4, False, Face.ThrowType.HEAVY)
+        super().__init__("Upgrade", owner, 5, False, Face.ThrowType.HEAVY)
         self.tierStack = [Deck.getFacesWithMult(1),Deck.getFacesWithMult(2),Deck.getFacesWithMult(3)]
 
     def comment(self, game, target : Entity):
@@ -254,9 +254,83 @@ class Upgrade(Face):
     def defaultTarget(self, game):
         return self._selectSelf(game)
 
+class HellAxe(Face):
+    def __init__(self, owner : Entity, tier):
+        super().__init__("HellAxe", owner, tier, True, Face.ThrowType.NORMAL)
+        self.dmg = R.demonicAxeDmg
+
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "no one to attack"
+        else:
+            return f"uses Demonic Axe on {target.name}"
+    
+    def apply(self, game, target : Entity):
+        """target must be the one to attack"""
+        if target is not None:
+            target.handleAttack(self.owner.buffed(self.dmg),False, game) 
+            if target.thorns > 0:
+                self.owner.handleAttack(target.thorns, False, game)
+        self.owner.playedThisTurn = True
+
+    def defaultTarget(self, game):
+        # Can only attack the ennemy with most health
+        target = None
+        for entity in game.entities:
+            if entity.team != self.owner.team and entity.alive():
+                if target is None or target.getHP() < entity.getHP():
+                    target = entity
+        return target
+
+
+class Revive(Face):
+    def __init__(self, owner : Entity, tier):
+        super().__init__("Revive", owner, tier, False, Face.ThrowType.LIGHT)
+
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "no one to revive"
+        else:
+            return f"revives {target.name}:"
+
+    def apply(self, game, target: Entity):
+        if target is not None and not target.alive():
+            target.revive(R.hpWhenRevived)
+        self.owner.playedThisTurn = True
+
+    def defaultTarget(self, game):
+        """Target is the first dead entity of the team"""
+        for entity in game.entities:
+            if entity.team == self.owner.team and not entity.alive():
+                return entity
+        return None
+
+
+class Mummy(Face):
+    def __init__(self, owner : Entity, tier):
+        super().__init__("Mummyfy", owner, tier, False, Face.ThrowType.NORMAL)
+
+    def comment(self, game, target : Entity):
+        if target is None:
+            return "no one to mummyfy"
+        else:
+            return f"mummyfy {target.name}:"
+        
+    def defaultTarget(self, game):
+        """Target is the first dead entity of the team"""
+        for entity in game.entities:
+            if entity.team == self.owner.team and not entity.alive():
+                return entity
+        return None
+    
+    def apply(self, game, target: Entity):
+        if target is not None and not target.alive():
+            target.mummyfy(R.hpWhenMummyfied)
+        self.owner.playedThisTurn = True
+
 class Tank(Face):
     def __init__(self, owner : Entity):
-        super().__init__("Tank", owner, 4, False, Face.ThrowType.LIGHT)
+        super().__init__("Tank", owner, 5, False, Face.ThrowType.LIGHT)
         self.armor = R.tankArmor
 
     def comment(self, game, target : Entity):
@@ -276,7 +350,7 @@ class Tank(Face):
 
 class Vampire(Face):
     def __init__(self, owner):
-        super().__init__("Vampire", owner, 4, False)
+        super().__init__("Vampire", owner, 5, False)
 
     def comment(self, game, target : Entity):
         if target is None:
@@ -300,7 +374,7 @@ class Vampire(Face):
 
 class King(Face):
     def __init__(self, owner):
-        super().__init__("King", owner, 4, False)
+        super().__init__("King", owner, 5, False)
         self.dmg = R.kingDmg
         self.heal = R.kingHeal
         self.armor = R.kingArmor
@@ -325,7 +399,7 @@ class King(Face):
 
 class Paladin(Face):
     def __init__(self, owner):
-        super().__init__("Paladin", owner, 4, False)
+        super().__init__("Paladin", owner, 5, False)
         self.heal = R.paladinHeal
 
     def comment(self, game, target : Entity):
@@ -345,7 +419,7 @@ class Paladin(Face):
 
 class Lich(Face):
     def __init__(self, owner):
-        super().__init__("Lich", owner, 4, False)
+        super().__init__("Lich", owner, 5, False)
 
     def comment(self, game, target : Entity):
         return f"uses Lich"
@@ -366,7 +440,7 @@ class Lich(Face):
     
 class Barbarian(Face):
     def __init__(self, owner : Entity):
-        super().__init__("Barbarian", owner, 4, False, Face.ThrowType.LIGHT)
+        super().__init__("Barbarian", owner, 5, False, Face.ThrowType.LIGHT)
 
     def comment(self, game, target : Entity):
         return f"uses Barbarian:"
@@ -386,7 +460,7 @@ class Barbarian(Face):
 
 class Thief(Face):
     def __init__(self, owner : Entity):
-        super().__init__("Thief", owner, 4, False, Face.ThrowType.HEAVY)
+        super().__init__("Thief", owner, 5, False, Face.ThrowType.HEAVY)
 
     def comment(self, game, target : Entity):
         if target is None:
@@ -443,7 +517,7 @@ class Thief(Face):
     
 class Judge(Face):
     def __init__(self, owner : Entity):
-        super().__init__("Judge", owner, 4, False, Face.ThrowType.LIGHT)
+        super().__init__("Judge", owner, 5, False, Face.ThrowType.LIGHT)
 
     def comment(self, game, target : Entity):
         return "has choices between"

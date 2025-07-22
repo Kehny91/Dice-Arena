@@ -60,6 +60,8 @@ class Game:
             entityPlaying : Entity = self.entities[i]
             entityPlaying.resetEffects()
 
+            entityPlaying.prePlayMove() # Handle black heart and other effects before playing
+
             ge.print(f"{entityPlaying.name} faces : {entityPlaying.facesStr()} :")
        
             # Handle bombs and poisons
@@ -175,6 +177,7 @@ class Entity:
         self.parent = parent
         self.faces = []
         self._hp = hp
+        self._blackHeart = 0
         self.initialHp = hp
         self.name = name
         self.activeArmor = 0
@@ -187,13 +190,15 @@ class Entity:
         self.bombs = 0
         self.poisons = 0
         self.thorns = 0
+        
 
         self.immuning = None # Who this entity is immuning
         self.stunning = None # Who this entity is stunning
-
+    
     def dies(self, game : Game):
         self.resetEffects()
         self._hp = 0
+        self._blackHeart = 0
         ge.print(f"{self.name} dies")
         for entity in game.entities:
             if entity.parent == self:
@@ -213,13 +218,14 @@ class Entity:
 
     def restoreHP(self, initialHp):
         self._hp = initialHp
+        self._blackHeart = 0
         self.initialHp = initialHp
 
     def getHP(self): # We protect from direct hp manipulation. (allow to take armor in consideration and track when entity dies)
-        return self._hp
+        return self._hp + self._blackHeart
 
     def alive(self):
-        return self._hp > 0
+        return self.getHP() > 0
     
     def isGhoul(self):
         return self.parent is not None
@@ -234,6 +240,21 @@ class Entity:
         self.taunting = False
         self.thorns = 0
 
+    def prePlayMove(self):
+        if self._blackHeart > 0:
+            self._blackHeart -= 1
+
+    def revive(self, hp):
+        assert not self.alive(), "Can't revive an alive entity"
+        self._hp = 1
+        self.resetEffects()
+        self.handleHeal(hp-1) # Using handle heal, we apply overheal rules
+
+    def mummyfy(self, blackHp):
+        assert not self.alive(), "Can't mummyfy an alive entity"
+        self.resetEffects()
+        self._blackHeart = blackHp
+
     def getRandomFace(self):
         return self.faces[randint(0,len(self.faces)-1)]
 
@@ -242,6 +263,21 @@ class Entity:
             if entity.stunning == self:
                 return False
         return not self.playedThisTurn and self.alive()
+
+    def _looseHealth(self, hp):
+        """Loose black heart first. Armor or immunity should be handled before. Calls dies if hp <= 0"""
+        if self._blackHeart > 0:
+            if hp <= self._blackHeart:
+                self._blackHeart -= hp
+                hp = 0
+            else:
+                hp -= self._blackHeart
+                self._blackHeart = 0
+        self._hp -= hp
+        if self._hp < 0:
+            self._hp = 0
+        if not self.alive():
+            self.dies()
 
     def handleAttack(self, dmg, magic, game):
         """Take armor into account. Returns hp lost"""
@@ -253,7 +289,7 @@ class Entity:
                 hpLost = max(0, dmg-self.activeArmor)
             if self._hp<hpLost:
                 hpLost = self._hp
-            self._hp -= hpLost
+            self._looseHealth(hpLost)
             ge.print(f"{self.name} looses {hpLost} hp")
         else:
             ge.print(f"{self.name} is immune")
