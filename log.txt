@@ -1,85 +1,415 @@
 
 
-New Turn. HP left: p1: 20|p2: 20|p3: 20|p4: 20 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : attacks(2) p2: p2 looses 2 hp 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : bombs p1 
+New Turn. HP left: p1: 40(0) | p2: 20(0) | p3: 20(0) | p4: 40(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : no one to revive 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : poisons p3 
+p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : p3 cured from poison uses Lich 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : attacks(2) p2: p2 looses 2 hp 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : fails 
+
+
+New Turn. HP left: p1: 40(0) | p2: 18(0) | p3: 20(0) | p4: 40(0) | Ghoul: 1(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : no one to revive 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : sweeps(1): p3 looses 1 hp p4 looses 1 hp Ghoul looses 1 hp Ghoul dies 
 p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : poisons p2 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : has choices between Fireball3 and Attack4 fireballs(3) p2: p2 looses 3 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : no one to mummyfy 
 
 
-New Turn. HP left: p1: 20|p2: 15|p3: 20|p4: 20 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : p1 exploded p1 looses 6 hp attacks(4) p2: p2 looses 4 hp 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : p2 is poisoned p2 looses 1 hp attacks(4) p1: p1 looses 4 hp 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : attacks(2) p1: p1 looses 2 hp 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : concentrates concentrates has choices between Sweep1 and Sweep1 sweeps(1): p1 looses 4 hp p2 looses 4 hp p3 looses 4 hp 
+New Turn. HP left: p1: 40(0) | p2: 18(0) | p3: 19(0) | p4: 39(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p3: p3 looses 4 hp 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : p2 is poisoned p2 looses 1 hp concentrates poisons p3 
+p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : p3 is poisoned p3 looses 1 hp p3 is poisoned p3 looses 1 hp armors(2): 2 armor gained 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : concentrates armors(2): 4 armor gained 
 
 
-New Turn. HP left: p1: 4|p2: 6|p3: 16|p4: 20 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : attacks(2) p2: p2 looses 2 hp 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : p2 cured from poison attacks(2) p1: p1 looses 2 hp 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : sweeps(1): p1 looses 1 hp p2 looses 1 hp p4 looses 1 hp 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : attacks(4) p1: p1 looses 1 hp p1 dies 
+New Turn. HP left: p1: 40(0) | p2: 17(0) | p3: 13(0) | p4: 39(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p3: p3 looses 2 hp 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : p2 is poisoned p2 looses 1 hp thiefs p3: swaps Attack2 for Poison 
+p3 faces : Lich|Attack2|Attack4|Armor2|Attack2|Concentration|Sweep1 : p3 is poisoned p3 looses 1 hp p3 cured from poison attacks(2) p2: p2 looses 2 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : no one to mummyfy 
 
 
-New Turn. HP left: p1: 0|p2: 3|p3: 16|p4: 19 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : 
+New Turn. HP left: p1: 40(0) | p2: 14(0) | p3: 10(0) | p4: 39(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : concentrates poisons p3 
+p2 faces : Thief|Poison|Attack4|Concentration|Poison|Bomb|Sweep1 : p2 is poisoned p2 looses 1 hp thiefs p3: swaps Attack4 for Attack4 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : p3 is poisoned p3 looses 1 hp p3 is poisoned p3 looses 1 hp p3 is poisoned p3 looses 1 hp uses Lich 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : concentrates armors(2): 4 armor gained 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : fails 
+
+
+New Turn. HP left: p1: 40(0) | p2: 13(0) | p3: 7(0) | p4: 39(0) | Ghoul: 1(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(2) p3: p3 looses 2 hp 
+p2 faces : Thief|Attack4|Attack4|Concentration|Poison|Bomb|Sweep1 : p2 is poisoned p2 looses 1 hp bombs p3 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : p3 passes bomb right p3 cured from poison p3 is poisoned p3 looses 1 hp p3 is poisoned p3 looses 1 hp uses Lich 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : p4 exploded p4 looses 6 hp has choices between Sweep1 and Attack2 sweeps(1): p1 looses 1 hp p2 looses 1 hp 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : attacks(2) p2: p2 looses 2 hp fails 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : fails 
+
+
+New Turn. HP left: p1: 39(0) | p2: 9(0) | p3: 3(0) | p4: 33(0) | Ghoul: 1(0) | Ghoul: 1(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p3 looses 1 hp p4 looses 1 hp Ghoul looses 1 hp Ghoul dies 
+p2 faces : Thief|Attack4|Attack4|Concentration|Poison|Bomb|Sweep1 : p2 cured from poison concentrates concentrates attacks(4) p3: p3 looses 2 hp p3 dies Ghoul dies 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : attacks(2) p2: p2 looses 2 hp 
+
+
+New Turn. HP left: p1: 39(0) | p2: 7(0) | p3: 0(0) | p4: 32(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p4 looses 1 hp 
+p2 faces : Thief|Attack4|Attack4|Concentration|Poison|Bomb|Sweep1 : thiefs p4: swaps Attack4 for Concentration 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : mummyfy p3: 
+
+
+New Turn. HP left: p1: 39(0) | p2: 7(0) | p3: 0(10) | p4: 31(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p3 looses 1 hp p4 looses 1 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : bombs p3 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : p3 passes bomb left concentrates attacks(2) p2: p2 looses 4 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(4) p2: p2 looses 3 hp p2 dies 
+
+
+New Turn. HP left: p1: 39(0) | p2: 0(0) | p3: 0(8) | p4: 30(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p3: p3 looses 4 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : concentrates uses Lich 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : sweeps(1): p1 looses 1 hp 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : attacks(2) p1: p1 looses 2 hp fails 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : attacks(2) p1: p1 looses 2 hp fails 
+
+
+New Turn. HP left: p1: 34(0) | p2: 0(0) | p3: 0(3) | p4: 30(0) | Ghoul: 1(0) | Ghoul: 1(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p3: p3 looses 3 hp p3 dies Ghoul dies 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(4) p1: p1 looses 4 hp 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : fails 
+
+
+New Turn. HP left: p1: 30(0) | p2: 0(0) | p3: 0(0) | p4: 30(0) | Ghoul: 1(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p4 looses 1 hp Ghoul looses 1 hp Ghoul dies 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : has choices between Attack4 and Judge has choices between Attack4 and Judge has choices between Mummyfy and Attack2 mummyfy p3: 
+
+
+New Turn. HP left: p1: 30(0) | p2: 0(0) | p3: 0(10) | p4: 29(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : revives p2: p2 heals 4 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : poisons p3 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : p3 is poisoned p3 looses 1 hp armors(2): 2 armor gained 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : armors(2): 2 armor gained 
+
+
+New Turn. HP left: p1: 30(0) | p2: 5(0) | p3: 0(8) | p4: 29(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p3 looses 0 hp p4 looses 0 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : attacks(4) p3: p3 looses 2 hp 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : p3 is poisoned p3 looses 1 hp attacks(2) p2: p2 looses 2 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(4) p2: p2 looses 3 hp p2 dies 
+
+
+New Turn. HP left: p1: 30(0) | p2: 0(0) | p3: 0(4) | p4: 29(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p3: p3 looses 4 hp p3 dies 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(4) p1: p1 looses 4 hp 
+
+
+New Turn. HP left: p1: 26(0) | p2: 0(0) | p3: 0(0) | p4: 29(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : use Tanks: 2 thorns gained 3 armor gained 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : armors(2): 2 armor gained 
+
+
+New Turn. HP left: p1: 26(0) | p2: 0(0) | p3: 0(0) | p4: 29(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p4 looses 0 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : armors(2): 2 armor gained 
+
+
+New Turn. HP left: p1: 26(0) | p2: 0(0) | p3: 0(0) | p4: 29(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : concentrates concentrates sweeps(1): p4 looses 2 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : sweeps(1): p1 looses 1 hp 
+
+
+New Turn. HP left: p1: 25(0) | p2: 0(0) | p3: 0(0) | p4: 27(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : poisons p4 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : p4 cured from poison mummyfy p3: 
+
+
+New Turn. HP left: p1: 25(0) | p2: 0(0) | p3: 0(10) | p4: 27(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p3 looses 1 hp p4 looses 1 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : armors(2): 2 armor gained 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : sweeps(1): p1 looses 1 hp 
+
+
+New Turn. HP left: p1: 24(0) | p2: 0(0) | p3: 0(8) | p4: 26(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(2) p3: p3 looses 0 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : concentrates uses Lich 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(2) p1: p1 looses 2 hp 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : fails 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : fails 
+
+
+New Turn. HP left: p1: 22(0) | p2: 0(0) | p3: 0(7) | p4: 26(0) | Ghoul: 1(0) | Ghoul: 1(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : concentrates attacks(4) p3: p3 looses 7 hp p3 dies Ghoul dies 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : has choices between Armor2 and Attack4 attacks(4) p1: p1 looses 4 hp 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : fails 
+
+
+New Turn. HP left: p1: 18(0) | p2: 0(0) | p3: 0(0) | p4: 26(0) | Ghoul: 1(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p4 looses 1 hp Ghoul looses 1 hp Ghoul dies 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : sweeps(1): p1 looses 1 hp 
+
+
+New Turn. HP left: p1: 17(0) | p2: 0(0) | p3: 0(0) | p4: 25(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : revives p2: p2 heals 4 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : thiefs p4: refuses swaping Attack4 for Attack2 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(4) p2: p2 looses 4 hp 
+
+
+New Turn. HP left: p1: 17(0) | p2: 1(0) | p3: 0(0) | p4: 25(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : no one to revive 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : sweeps(1): p4 looses 1 hp 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : mummyfy p3: 
+
+
+New Turn. HP left: p1: 17(0) | p2: 1(0) | p3: 0(10) | p4: 24(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p3 looses 1 hp p4 looses 1 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : attacks(4) p3: p3 looses 4 hp 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : uses Lich 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : armors(2): 2 armor gained 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : attacks(2) p2: p2 looses 1 hp p2 dies fails 
+
+
+New Turn. HP left: p1: 17(0) | p2: 0(0) | p3: 0(4) | p4: 23(0) | Ghoul: 1(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : concentrates attacks(2) p3: p3 looses 4 hp p3 dies Ghoul dies 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(4) p1: p1 looses 4 hp 
+
+
+New Turn. HP left: p1: 13(0) | p2: 0(0) | p3: 0(0) | p4: 23(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p4: p4 looses 4 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(4) p1: p1 looses 4 hp 
+
+
+New Turn. HP left: p1: 9(0) | p2: 0(0) | p3: 0(0) | p4: 19(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : use Tanks: 2 thorns gained 3 armor gained 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : armors(2): 2 armor gained 
+
+
+New Turn. HP left: p1: 9(0) | p2: 0(0) | p3: 0(0) | p4: 19(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p4: p4 looses 2 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(4) p1: p1 looses 4 hp 
+
+
+New Turn. HP left: p1: 5(0) | p2: 0(0) | p3: 0(0) | p4: 17(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p4: p4 looses 4 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : armors(2): 2 armor gained 
+
+
+New Turn. HP left: p1: 5(0) | p2: 0(0) | p3: 0(0) | p4: 13(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : concentrates sweeps(1): p4 looses 0 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Poison|Armor2|Attack2|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Attack4|Mummyfy|Sweep1 : attacks(2) p1: p1 looses 2 hp 
+
+
+New Turn. HP left: p1: 3(0) | p2: 0(0) | p3: 0(0) | p4: 13(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : concentrates concentrates attacks(4) p4: p4 looses 13 hp p4 dies 
+END GAME 
+
+New Turn. HP left: p1: 40(0) | p2: 20(0) | p3: 20(0) | p4: 40(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : poisons p3 
 p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : attacks(2) p3: p3 looses 2 hp 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : concentrates armors(2): 4 armor gained 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : concentrates fireballs(3) p2: p2 looses 3 hp p2 dies 
+p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : p3 is poisoned p3 looses 1 hp concentrates sweeps(1): p1 looses 2 hp p2 looses 2 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : armors(2): 2 armor gained 
 
 
-New Turn. HP left: p1: 0|p2: 0|p3: 14|p4: 19 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : poisons p4 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : p4 is poisoned p4 looses 1 hp armors(2): 2 armor gained 
+New Turn. HP left: p1: 38(0) | p2: 18(0) | p3: 17(0) | p4: 40(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : poisons p3 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : sweeps(1): p3 looses 1 hp p4 looses 0 hp 
+p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : p3 is poisoned p3 looses 1 hp p3 is poisoned p3 looses 1 hp poisons p2 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : no one to mummyfy 
 
 
-New Turn. HP left: p1: 0|p2: 0|p3: 14|p4: 18 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : attacks(4) p4: p4 looses 2 hp 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : p4 is poisoned p4 looses 1 hp armors(2): 2 armor gained 
+New Turn. HP left: p1: 38(0) | p2: 18(0) | p3: 14(0) | p4: 40(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : poisons p3 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : p2 cured from poison sweeps(1): p3 looses 1 hp p4 looses 1 hp 
+p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : p3 cured from poison p3 is poisoned p3 looses 1 hp p3 cured from poison sweeps(1): p1 looses 1 hp p2 looses 1 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : attacks(4) p2: p2 looses 4 hp 
 
 
-New Turn. HP left: p1: 0|p2: 0|p3: 14|p4: 15 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : concentrates concentrates attacks(2) p4: p4 looses 6 hp 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : p4 is poisoned p4 looses 1 hp concentrates has choices between Attack4 and Attack4 attacks(4) p3: p3 looses 8 hp 
+New Turn. HP left: p1: 37(0) | p2: 13(0) | p3: 12(0) | p4: 39(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : poisons p3 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : bombs p3 
+p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : p3 exploded p3 looses 6 hp p3 is poisoned p3 looses 1 hp p3 cured from poison attacks(2) p2: p2 looses 2 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : has choices between Sweep1 and Mummyfy no one to mummyfy 
 
 
-New Turn. HP left: p1: 0|p2: 0|p3: 6|p4: 8 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : armors(2): 2 armor gained 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : p4 is poisoned p4 looses 1 hp has choices between Attack2 and Sweep1 attacks(2) p3: p3 looses 0 hp 
+New Turn. HP left: p1: 37(0) | p2: 11(0) | p3: 5(0) | p4: 39(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(2) p3: p3 looses 2 hp 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : attacks(2) p3: p3 looses 2 hp 
+p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : p3 is poisoned p3 looses 1 hp p3 dies 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : mummyfy p3: 
 
 
-New Turn. HP left: p1: 0|p2: 0|p3: 6|p4: 7 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : poisons p4 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : p4 is poisoned p4 looses 1 hp p4 cured from poison armors(2): 2 armor gained 
+New Turn. HP left: p1: 37(0) | p2: 11(0) | p3: 0(10) | p4: 39(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : no one to revive 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : bombs p3 
+p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : p3 delay the bomb armors(2): 2 armor gained 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : has choices between Judge and Mummyfy has choices between Mummyfy and Armor2 no one to mummyfy 
 
 
-New Turn. HP left: p1: 0|p2: 0|p3: 6|p4: 6 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : attacks(4) p4: p4 looses 2 hp 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : p4 cured from poison fireballs(3) p3: p3 looses 3 hp 
+New Turn. HP left: p1: 37(0) | p2: 11(0) | p3: 0(9) | p4: 39(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : use Tanks: 2 thorns gained 3 armor gained 
+p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : thiefs p3: swaps Attack2 for Armor2 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : p3 delay the bomb uses Lich 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : has choices between Armor2 and Concentration concentrates concentrates sweeps(1): p1 looses 1 hp p4 looses 2 hp p2 looses 4 hp 
+Ghoul faces : FAIL|FAIL|FAIL|FAIL|Attack2|Attack2 : fails 
 
 
-New Turn. HP left: p1: 0|p2: 0|p3: 3|p4: 4 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : armors(2): 2 armor gained 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : attacks(4) p3: p3 looses 2 hp 
+New Turn. HP left: p1: 36(0) | p2: 7(0) | p3: 0(8) | p4: 37(0) | Ghoul: 1(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p3: p3 looses 4 hp 
+p2 faces : Thief|Armor2|Attack4|Concentration|Poison|Bomb|Sweep1 : attacks(4) p3: p3 looses 4 hp p3 dies Ghoul dies 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Mummyfy|Sweep1 : attacks(2) p2: p2 looses 2 hp 
 
 
-New Turn. HP left: p1: 0|p2: 0|p3: 1|p4: 4 
-p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Attack2|Sweep1 : 
-p2 faces : Thief|Attack2|Attack4|Concentration|Poison|Bomb|Sweep1 : 
-p3 faces : Lich|Attack2|Attack4|Armor2|Poison|Concentration|Sweep1 : poisons p4 
-p4 faces : Judge|Attack2|Attack4|Armor2|Concentration|Fireball3|Sweep1 : p4 is poisoned p4 looses 1 hp attacks(2) p3: p3 looses 1 hp p3 dies 
+New Turn. HP left: p1: 36(0) | p2: 5(0) | p3: 0(0) | p4: 37(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : use Tanks: 2 thorns gained 3 armor gained 
+p2 faces : Thief|Armor2|Attack4|Concentration|Poison|Bomb|Sweep1 : concentrates thiefs p4: swaps Armor2 for Concentration 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : mummyfy p3: 
+
+
+New Turn. HP left: p1: 36(0) | p2: 5(0) | p3: 0(10) | p4: 37(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p3 looses 1 hp p4 looses 1 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : poisons p3 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : p3 cured from poison concentrates attacks(2) p2: p2 looses 4 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : armors(2): 2 armor gained 
+
+
+New Turn. HP left: p1: 36(0) | p2: 1(0) | p3: 0(8) | p4: 36(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : sweeps(1): p3 looses 1 hp p4 looses 0 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : poisons p3 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : p3 cured from poison concentrates attacks(4) p2: p2 looses 1 hp p2 dies 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : has choices between Mummyfy and Mummyfy no one to mummyfy 
+
+
+New Turn. HP left: p1: 36(0) | p2: 0(0) | p3: 0(6) | p4: 36(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(2) p3: p3 looses 2 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : attacks(2) p1: p1 looses 2 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : attacks(2) p1: p1 looses 2 hp 
+
+
+New Turn. HP left: p1: 32(0) | p2: 0(0) | p3: 0(3) | p4: 36(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : poisons p3 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : p3 is poisoned p3 looses 1 hp poisons p1 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : sweeps(1): p1 looses 1 hp 
+
+
+New Turn. HP left: p1: 31(0) | p2: 0(0) | p3: 0(1) | p4: 36(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : p1 is poisoned p1 looses 1 hp concentrates attacks(2) p3: p3 looses 1 hp p3 dies 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : sweeps(1): p1 looses 1 hp 
+
+
+New Turn. HP left: p1: 29(0) | p2: 0(0) | p3: 0(0) | p4: 36(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : p1 is poisoned p1 looses 1 hp revives p2: p2 heals 5 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : sweeps(1): p4 looses 1 hp 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : attacks(2) p2: p2 looses 2 hp 
+
+
+New Turn. HP left: p1: 28(0) | p2: 3(0) | p3: 0(0) | p4: 35(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : p1 cured from poison concentrates attacks(4) p4: p4 looses 8 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : concentrates bombs p4 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : p4 delay the bomb p4 delay the bomb attacks(4) p2: p2 looses 3 hp p2 dies 
+
+
+New Turn. HP left: p1: 28(0) | p2: 0(0) | p3: 0(0) | p4: 27(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(2) p4: p4 looses 2 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : p4 delay the bomb p4 delay the bomb sweeps(1): p1 looses 1 hp 
+
+
+New Turn. HP left: p1: 27(0) | p2: 0(0) | p3: 0(0) | p4: 25(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : concentrates concentrates concentrates poisons p4 Can't spawn more poison Can't spawn more poison Can't spawn more poison Can't spawn more poison 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : p4 exploded p4 looses 6 hp p4 exploded p4 looses 6 hp p4 is poisoned p4 looses 1 hp p4 is poisoned p4 looses 1 hp p4 cured from poison p4 is poisoned p4 looses 1 hp armors(2): 2 armor gained 
+
+
+New Turn. HP left: p1: 27(0) | p2: 0(0) | p3: 0(0) | p4: 10(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(2) p4: p4 looses 0 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : p4 cured from poison p4 is poisoned p4 looses 1 hp p4 cured from poison has choices between Armor2 and Attack2 armors(2): 2 armor gained 
+
+
+New Turn. HP left: p1: 27(0) | p2: 0(0) | p3: 0(0) | p4: 9(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : poisons p4 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : p4 is poisoned p4 looses 1 hp p4 is poisoned p4 looses 1 hp attacks(4) p1: p1 looses 4 hp 
+
+
+New Turn. HP left: p1: 23(0) | p2: 0(0) | p3: 0(0) | p4: 7(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(4) p4: p4 looses 4 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : p4 is poisoned p4 looses 1 hp p4 cured from poison has choices between Mummyfy and Armor2 mummyfy p3: 
+
+
+New Turn. HP left: p1: 23(0) | p2: 0(0) | p3: 0(10) | p4: 2(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : use Tanks: 2 thorns gained 3 armor gained 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : poisons p1 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : p4 cured from poison has choices between Attack4 and Sweep1 attacks(4) p1: p1 looses 1 hp p4 looses 2 hp p4 dies 
+
+
+New Turn. HP left: p1: 22(0) | p2: 0(0) | p3: 0(9) | p4: 0(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : p1 is poisoned p1 looses 1 hp use Tanks: 2 thorns gained 3 armor gained 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : sweeps(1): p1 looses 0 hp p3 looses 2 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : 
+
+
+New Turn. HP left: p1: 21(0) | p2: 0(0) | p3: 0(6) | p4: 0(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : p1 cured from poison use Tanks: 2 thorns gained 3 armor gained 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : attacks(2) p1: p1 looses 0 hp p3 looses 2 hp 
+p4 faces : Judge|Attack2|Attack4|Armor2|Armor2|Mummyfy|Sweep1 : 
+
+
+New Turn. HP left: p1: 21(0) | p2: 0(0) | p3: 0(3) | p4: 0(0) 
+p1 faces : Tank|Attack2|Attack4|Concentration|Poison|Revive|Sweep1 : attacks(2) p3: p3 looses 2 hp 
+p2 faces : Thief|Concentration|Attack4|Concentration|Poison|Bomb|Sweep1 : 
+p3 faces : Lich|Attack2|Attack4|Attack2|Poison|Concentration|Sweep1 : 
 END GAME 

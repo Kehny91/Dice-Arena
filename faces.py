@@ -227,7 +227,7 @@ class Bomb(Face):
 class Upgrade(Face):
     def __init__(self, owner : Entity):
         super().__init__("Upgrade", owner, 5, False, Face.ThrowType.HEAVY)
-        self.tierStack = [Deck.getFacesWithMult(1),Deck.getFacesWithMult(2),Deck.getFacesWithMult(3)]
+        self.tierStack = [Deck.getFacesWithMult(1),Deck.getFacesWithMult(2),Deck.getFacesWithMult(3),Deck.getFacesWithMult(4)]
 
     def comment(self, game, target : Entity):
         return f"upgrades"
@@ -238,12 +238,12 @@ class Upgrade(Face):
             weakestFaceIndex = None
             weakestFaceTier = None
             for k,v in enumerate(self.owner.faces):
-                if v.tier<4 and (weakestFaceTier is None or v.tier < weakestFaceTier):
+                if v.tier<5 and (weakestFaceTier is None or v.tier < weakestFaceTier):
                     weakestFaceIndex = k
                     weakestFaceTier = v.tier
 
             assert weakestFaceTier is not None, "WEIRD"
-            newFaceTier = min(weakestFaceTier+1, 3)
+            newFaceTier = min(weakestFaceTier+1, 4)
 
             index  = getNIndexesRandomly(self.tierStack[newFaceTier-1],1,False)[0] # minus one because of indexes
             self.owner.faces.pop(weakestFaceIndex)
@@ -254,9 +254,9 @@ class Upgrade(Face):
     def defaultTarget(self, game):
         return self._selectSelf(game)
 
-class HellAxe(Face):
+class DemonicAxe(Face):
     def __init__(self, owner : Entity, tier):
-        super().__init__("HellAxe", owner, tier, True, Face.ThrowType.NORMAL)
+        super().__init__("DemonicAxe", owner, tier, True, Face.ThrowType.NORMAL)
         self.dmg = R.demonicAxeDmg
 
     def comment(self, game, target : Entity):
@@ -285,7 +285,7 @@ class HellAxe(Face):
 
 class Revive(Face):
     def __init__(self, owner : Entity, tier):
-        super().__init__("Revive", owner, tier, False, Face.ThrowType.LIGHT)
+        super().__init__("Revive", owner, tier, True, Face.ThrowType.LIGHT)
 
     def comment(self, game, target : Entity):
         if target is None:
@@ -308,7 +308,7 @@ class Revive(Face):
 
 class Mummy(Face):
     def __init__(self, owner : Entity, tier):
-        super().__init__("Mummyfy", owner, tier, False, Face.ThrowType.NORMAL)
+        super().__init__("Mummyfy", owner, tier, True, Face.ThrowType.NORMAL)
 
     def comment(self, game, target : Entity):
         if target is None:
@@ -602,6 +602,13 @@ def addSpellByString(player, string, tier):
         player.faces.append(Poison(player, tier))
     elif string[0:3] == "Bom":
         player.faces.append(Bomb(player, tier))
+    elif string[0:3] ==  "Rev":
+        player.faces.append(Revive(player,tier))
+    elif string[0:3] ==  "Mum":
+        player.faces.append(Mummy(player, tier))
+    elif string[0:3] ==  "Dem":
+        player.faces.append(DemonicAxe(player, tier))
+
     elif string[0:3] == "Tan":
         player.faces.append(Tank(player))
     elif string[0:3] == "Vam":

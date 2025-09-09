@@ -48,7 +48,7 @@ class Game:
         # import multiprocessing as mp
         # print(f"{mp.current_process().pid} new turn")
         ge.print("\n\nNew Turn. HP left: ",end="")
-        ge.print("|".join([f"{entity.name}: {entity.getHP()}" for entity in self.entities]))
+        ge.print(" | ".join([f"{entity.name}: {entity._hp}({entity._blackHeart})" for entity in self.entities]))
         ge.print("",end="\n")
 
         for entity in self.entities:
@@ -246,9 +246,8 @@ class Entity:
 
     def revive(self, hp):
         assert not self.alive(), "Can't revive an alive entity"
-        self._hp = 1
+        self.handleHeal(hp, True)
         self.resetEffects()
-        self.handleHeal(hp-1) # Using handle heal, we apply overheal rules
 
     def mummyfy(self, blackHp):
         assert not self.alive(), "Can't mummyfy an alive entity"
@@ -264,7 +263,7 @@ class Entity:
                 return False
         return not self.playedThisTurn and self.alive()
 
-    def _looseHealth(self, hp):
+    def _looseHealth(self, hp, game : Game):
         """Loose black heart first. Armor or immunity should be handled before. Calls dies if hp <= 0"""
         if self._blackHeart > 0:
             if hp <= self._blackHeart:
@@ -277,7 +276,7 @@ class Entity:
         if self._hp < 0:
             self._hp = 0
         if not self.alive():
-            self.dies()
+            self.dies(game)
 
     def handleAttack(self, dmg, magic, game):
         """Take armor into account. Returns hp lost"""
@@ -287,21 +286,17 @@ class Entity:
                 hpLost = dmg
             else:
                 hpLost = max(0, dmg-self.activeArmor)
-            if self._hp<hpLost:
-                hpLost = self._hp
-            self._looseHealth(hpLost)
+            if self.getHP()<hpLost:
+                hpLost = self.getHP()
             ge.print(f"{self.name} looses {hpLost} hp")
+            self._looseHealth(hpLost, game) # Also handle death
         else:
             ge.print(f"{self.name} is immune")
-        self._hp = max(self._hp, 0)
-
-        if self._hp == 0:
-            self.dies(game)
 
         return hpLost
 
-    def handleHeal(self, heal):
-        assert self.alive(), "WEIRD"
+    def handleHeal(self, heal, revives=False):
+        assert (self.alive() and not revives) or (not self.alive() and revives), "WEIRD"
         self._hp += heal
         if not R.canOverHeal:
             self._hp = min(self._hp, self.initialHp)
@@ -371,7 +366,7 @@ class Entity:
         return"|".join([f.faceName for f in self.faces])
 
     def debug(self):
-        print(f"{self.name} : Team {self.team} HP {self._hp} faces : ",end="")
+        print(f"{self.name} : Team {self.team} HP {self._hp}|{self._blackHeart} faces : ",end="")
         print(self.facesStr())
 
     def backupFaces(self):

@@ -18,6 +18,7 @@ def createRandomPlayer(hp, name, team, repartition : str):
         1 - Tier 1
         2 - Tier 2
         3 - Tier 3
+        4 - Tier 4
         F - Fail
         C - Class
         U - Upgrade
@@ -25,14 +26,15 @@ def createRandomPlayer(hp, name, team, repartition : str):
     nbLevel1 = repartition.count("1")
     nbLevel2 = repartition.count("2")
     nbLevel3 = repartition.count("3")
+    nbLevel4 = repartition.count("4")
     nbClass = repartition.count("C")
-    nbPerTier = [nbLevel1,nbLevel2,nbLevel3,nbClass] #classes is counted as tier 4
+    nbPerTier = [nbLevel1,nbLevel2,nbLevel3,nbLevel4,nbClass] #classes is counted as tier 4
 
     nbFail = repartition.count("F")
     nbUpgrade = repartition.count("U")
 
     p = Entity(hp,name,team)
-    for tierIndex in [3,0,1,2]: #Start with class
+    for tierIndex in [4,0,1,2,3]: #Start with class
         facesWithMult = Deck.getFacesWithMult(tierIndex+1)
         faceIndexes = getNIndexesRandomly(facesWithMult, nbPerTier[tierIndex], True)
         for i in faceIndexes:
@@ -200,8 +202,7 @@ def battlePlayers(hp, players, minNbPlayerPerSide, maxNbPlayerPerSide, maxTime_m
     nbIters = nbPlayers*200
     matches = generate_matches(players, minNbPlayerPerSide, maxNbPlayerPerSide, nbIters)
 
-    for playerIndexes in matches:
-        battlePlayersOnPredefinedMatchs(hp, players, matches, maxTime_min, dictOfSpellWinrate, matchTimes_s)
+    battlePlayersOnPredefinedMatchs(hp, players, matches, maxTime_min, dictOfSpellWinrate, matchTimes_s)
     
     return dictOfSpellWinrate, matchTimes_s
 
@@ -237,7 +238,7 @@ def giveWinrateOfEveryFace(dictOfSpellWinrate):
         if len(spell) > maxWidth:
             maxWidth =  len(spell)
 
-    for tier in [1,2,3,4]:
+    for tier in [1,2,3,4,5]:
         print("")
         for r in results:
             if r[0] in Deck.getFaces(tier):
@@ -267,17 +268,17 @@ def analyseGameLength(matchTimes_s, minPlayer, maxPlayer):
 def testSpecificMatchup():
     ge.set_show_prints(True)
     hp = 20
-    dice1 = ["Tank", "Attack2", "Attack4", "Concentration","Poison","Attack2", "Sweep1"]
-    player1 = createPlayer(20, "p1", 1, dice1)
+    dice1 = ["Tank", "Attack2", "Attack4", "Concentration","Poison","Revive", "Sweep1"]
+    player1 = createPlayer(40, "p1", 1, dice1)
 
     dice2 = ["Thief", "Attack2", "Attack4", "Concentration","Poison","Bomb", "Sweep1"]
-    player2 = createPlayer(20, "p2", 2, dice2)
+    player2 = createPlayer(20, "p2", 1, dice2)
 
     dice3 = ["Lich", "Attack2", "Attack4", "Armor2","Poison","Concentration", "Sweep1"]
-    player3 = createPlayer(20, "p3", 3, dice3)
+    player3 = createPlayer(20, "p3", 2, dice3)
 
-    dice4 = ["Judge", "Attack2", "Attack4", "Armor2","Concentration","Fireball3", "Sweep1"]
-    player4 = createPlayer(20, "p4", 4, dice4)
+    dice4 = ["Judge", "Attack2", "Attack4", "Armor2","Concentration","Mummyfy", "Sweep1"]
+    player4 = createPlayer(40, "p4", 2, dice4)
     # Upgrade need a specific call (cannot init by string)
     
     
@@ -300,10 +301,11 @@ if __name__ == "__main__":
     Nmax = Deck.nbOfDifferentDices1123CF
     hp = 20
 
-    minPlayersPerSide = 2
-    maxPlayersPerSide = 4
+    minPlayersPerSide = 3
+    maxPlayersPerSide = 3
 
     players = createNrandomPlayers(hp,Nmax//2,"F112CU")
+    # players = createNrandomPlayers(hp,Nmax//2,"F124CU") # Test tier 4
     #players = createNrandomPlayers(hp,Nmax,"C11223") # No upgrade.
     
     dictOfSpellWinrate, matchTimes_s = battlePlayersMultiproc(hp,players,minPlayersPerSide,maxPlayersPerSide,60) 
